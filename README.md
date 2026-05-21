@@ -1,0 +1,225 @@
+# Brain-Sync AI Tutor
+
+뇌과학 기반 AI 튜터링 시스템입니다. 사용자가 업로드한 PDF 또는 텍스트 학습 자료를 분석해 핵심 개념을 추출하고, 사용자가 내용을 직접 떠올리고 설명하도록 유도하는 웹 기반 학습 도구를 목표로 합니다.
+
+이 프로젝트는 AI 모델을 직접 학습시키기보다, Gemini API를 활용해 뇌과학 및 인지과학 기반 튜터링 로직을 구현하는 데 초점을 둡니다.
+
+## 프로젝트 목적
+
+기존 AI 학습 도구는 요약, 정답 제공, 단순 문제 생성에 치우치는 경우가 많습니다. Brain-Sync AI Tutor는 학습자가 스스로 기억을 인출하고, 오개념을 발견하고, 단계적 힌트를 통해 정답에 접근하고, 자신의 언어로 다시 설명하도록 돕습니다.
+
+핵심 학습 원리는 다음과 같습니다.
+
+- 인지 부하 조절
+- 능동적 회상
+- 예측 오류 기반 학습
+- 오개념 탐지
+- 단계적 힌트 제공
+- 자기 설명
+- 간격 반복 복습
+
+## 제출 형태
+
+대학교 과제 제출용으로는 **웹 앱 + 백엔드 API 서버** 구조를 사용합니다.
+
+- 웹 앱만 만들면 AI 처리 구조와 API 설계를 보여주기 어렵습니다.
+- API만 만들면 교수자나 동료가 시연 흐름을 직관적으로 보기 어렵습니다.
+- 모바일 앱은 개발 범위가 커지고 PDF 처리, AI 연동, 데이터 저장 로직을 설명하기 어렵습니다.
+
+따라서 React 웹 화면에서 학습 흐름을 시연하고, FastAPI 서버가 PDF 처리와 AI 튜터 API를 제공하는 형태가 가장 적합합니다.
+
+## Neuro-Learning Loop
+
+서비스의 핵심 학습 루프는 다음 6단계입니다.
+
+1. **Cognitive Chunking**
+   - 학습 자료를 작업 기억이 처리하기 쉬운 개념 단위로 분해합니다.
+2. **Active Recall Prompting**
+   - AI가 먼저 설명하지 않고, 사용자가 기억에서 답을 꺼내도록 질문합니다.
+3. **Prediction Error Trigger**
+   - 오답이나 불완전한 답변이 나오면 정답을 바로 제공하지 않고 오류를 인식하도록 역질문합니다.
+4. **Adaptive Scaffolding**
+   - 사용자의 답변 품질, 응답 시간, 반복 오답 여부를 바탕으로 Level 1~5 힌트를 제공합니다.
+5. **Self-Explanation & Reconstruction**
+   - 정답 도달 후 사용자가 개념을 자기 언어로 다시 설명하고, AI가 설명 품질을 평가합니다.
+6. **Spaced Reinforcement**
+   - 개념별 숙련도를 저장하고 취약 개념을 적절한 시점에 다시 복습하게 합니다.
+
+## MVP 기능
+
+초기 MVP는 전체 아이디어를 작게 완성하는 데 집중합니다.
+
+- PDF 업로드
+- 텍스트 입력
+- PDF 텍스트 추출
+- 핵심 개념 추출
+- 개념별 난이도 분류
+- Active Recall 질문 생성
+- 사용자 답변 입력
+- 답변 평가
+- 누락 개념 및 오개념 탐지
+- Level 1~5 단계별 힌트
+- 자기 설명 제출 및 평가
+- 학습 세션 저장
+- 세션 리포트 표시
+- 다음 복습 추천 개념 표시
+
+## MVP 제외 기능
+
+다음 기능은 핵심 학습 루프가 안정화된 뒤 확장합니다.
+
+- 복잡한 Knowledge Map 시각화
+- 정교한 기억 유지도 그래프
+- 모바일 앱
+- 결제 기능
+- 팀 학습 기능
+- 음성 답변 기능
+- 고급 관리자 페이지
+- 복잡한 멀티 Agent 구조
+
+## 기술 스택
+
+### Frontend
+
+- React
+- TypeScript
+- Vite
+- React Router
+- Lucide React
+
+### Backend
+
+- FastAPI
+- SQLAlchemy
+- SQLite
+- PyMuPDF
+- Gemini API
+
+### Development
+
+- Python virtual environment
+- npm
+- Git branch-based workflow
+- pytest
+- Vite build
+
+## 아키텍처
+
+```text
+Brain-Sync-AI-Tutor/
+  README.md
+  .env.example
+  frontend/
+    src/
+      api/
+      components/
+      pages/
+      types/
+  backend/
+    app/
+      main.py
+      api/
+      core/
+      db/
+      models/
+      schemas/
+      services/
+    tests/
+    requirements.txt
+  data/
+    uploads/
+  docs/
+    project-plan.md
+    demo-scenario.md
+```
+
+## 주요 API 계획
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/api/health` | 서버 상태 확인 |
+| POST | `/api/materials/upload` | PDF 업로드 및 텍스트 추출 |
+| POST | `/api/materials/{material_id}/concepts/extract` | 핵심 개념 추출 |
+| POST | `/api/concepts/{concept_id}/questions/generate` | 개념별 질문 생성 |
+| POST | `/api/sessions/start` | 학습 세션 시작 |
+| POST | `/api/questions/{question_id}/answer` | 사용자 답변 평가 |
+| POST | `/api/answers/{answer_id}/hint` | 단계별 힌트 생성 |
+| POST | `/api/concepts/{concept_id}/self-explanation` | 자기 설명 평가 |
+| GET | `/api/sessions/{session_id}/report` | 세션 리포트 조회 |
+
+## 데이터 모델 초안
+
+- `LearningMaterial`: 업로드된 학습 자료와 추출 텍스트
+- `Concept`: 자료에서 추출된 핵심 개념
+- `Question`: 개념별 Active Recall 질문
+- `LearningSession`: 학습 세션
+- `UserAnswer`: 사용자 답변과 평가 결과
+- `HintLog`: 단계별 힌트 기록
+- `SelfExplanation`: 자기 설명과 평가 결과
+- `ConceptMastery`: 개념별 숙련도와 다음 복습 시점
+
+## 개발 순서
+
+기능별 브랜치와 커밋을 남기며 순차적으로 개발합니다.
+
+1. `feature/project-setup`
+   - README, 문서, 환경변수 예시, Git ignore 규칙 작성
+2. `feature/backend-foundation`
+   - FastAPI 앱, SQLite 연결, health check API 구현
+3. `feature/pdf-upload`
+   - PDF 업로드, 파일 검증, 텍스트 추출, DB 저장 구현
+4. `feature/concept-extraction`
+   - Gemini 기반 핵심 개념 추출 구현
+5. `feature/question-generation`
+   - Active Recall 질문 생성 구현
+6. `feature/answer-evaluation`
+   - 답변 평가, 누락 개념, 오개념 탐지 구현
+7. `feature/adaptive-hinting`
+   - Level 1~5 힌트 생성 구현
+8. `feature/self-explanation`
+   - 자기 설명 평가와 숙련도 업데이트 구현
+9. `feature/session-report`
+   - 학습 리포트 API와 화면 구현
+10. `feature/submission-polish`
+    - 데모 시나리오, README 보강, 최종 검증
+
+## 실행 방법
+
+현재 단계에서는 프로젝트 계획과 프론트엔드 기본 구조가 준비되어 있습니다. 백엔드 구현 후 실행 명령은 아래와 같이 유지할 예정입니다.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+## 데모 시나리오
+
+1. 사용자가 PDF 학습 자료를 업로드합니다.
+2. 서버가 PDF 텍스트를 추출해 저장합니다.
+3. AI가 핵심 개념을 추출합니다.
+4. 사용자가 개념별 질문에 답변합니다.
+5. AI가 답변을 평가하고 오개념을 탐지합니다.
+6. 사용자가 막히면 단계별 힌트를 받습니다.
+7. 정답에 도달하면 자기 설명을 제출합니다.
+8. 세션 종료 후 취약 개념과 복습 추천을 확인합니다.
+
+## 예상 리스크
+
+- Gemini 응답이 항상 원하는 JSON 형식으로 오지 않을 수 있습니다.
+- PDF 품질에 따라 텍스트 추출 정확도가 달라질 수 있습니다.
+- 정답을 바로 알려주지 않는 힌트는 프롬프트 제어가 중요합니다.
+- PostgreSQL과 vector DB를 너무 빨리 도입하면 MVP 범위가 커질 수 있습니다.
+- 과제 제출용으로는 기능을 작게 나누어 Git history를 남기는 것이 중요합니다.
