@@ -1,0 +1,39 @@
+import fitz
+from fastapi.testclient import TestClient
+
+from app.main import create_app
+
+
+def make_pdf_bytes(text: str) -> bytes:
+    document = fitz.open()
+    page = document.new_page()
+    page.insert_text((72, 72), text)
+    return document.tobytes()
+
+
+def test_upload_material_extracts_text_and_stores_metadata() -> None:
+    pdf_bytes = make_pdf_bytes("Active recall strengthens long-term memory.")
+
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/api/materials/upload",
+            files={"file": ("neuro-learning.pdf", pdf_bytes, "application/pdf")},
+        )
+
+        body = response.json()
+        assert response.status_code == 201
+        assert body["id"] > 0
+        assert body["title"] == "neuro-learning"
+        assert body["extracted_text_length"] > 0
+        assert "Active recall" in body["preview"]
+
+
+def test_upload_material_rejects_non_pdf_file() -> None:
+    with TestClient(create_app()) as client:
+        response = client.post(
+            "/api/materials/upload",
+            files={"file": ("notes.txt", b"not a pdf", "text/plain")},
+        )
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "PDF 파일만 업로드할 수 있습니다."

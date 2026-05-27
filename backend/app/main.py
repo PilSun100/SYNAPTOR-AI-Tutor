@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.api.materials import router as materials_router
 from app.core.config import settings
 from app.db.init_db import init_db
 
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router, prefix="/api", tags=["health"])
+    app.include_router(materials_router, prefix="/api", tags=["materials"])
 
     return app
 

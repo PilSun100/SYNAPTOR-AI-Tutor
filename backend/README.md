@@ -19,6 +19,11 @@ uvicorn app.main:app --reload
 
 API docs are available at `http://localhost:8000/docs`.
 
+## Current endpoints
+
+- `GET /api/health`
+- `POST /api/materials/upload`
+
 ## Test
 
 ```bash
