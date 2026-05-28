@@ -29,6 +29,11 @@ class EvaluatedAnswer:
     feedback: str
 
 
+@dataclass(frozen=True)
+class GeneratedHint:
+    hint_text: str
+
+
 class LLMProvider(Protocol):
     source: str
 
@@ -49,6 +54,16 @@ class LLMProvider(Protocol):
         expected_answer: str,
         answer_text: str,
     ) -> EvaluatedAnswer:
+        pass
+
+    def generate_hint(
+        self,
+        question_text: str,
+        expected_answer: str,
+        answer_text: str,
+        missing_points: str,
+        hint_level: int,
+    ) -> GeneratedHint:
         pass
 
 
@@ -92,6 +107,29 @@ class GeminiProvider:
             _build_answer_evaluation_prompt(question_text, expected_answer, answer_text)
         )
         return _parse_answer_evaluation(response.text or "")
+
+    def generate_hint(
+        self,
+        question_text: str,
+        expected_answer: str,
+        answer_text: str,
+        missing_points: str,
+        hint_level: int,
+    ) -> GeneratedHint:
+        import google.generativeai as genai
+
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(
+            _build_hint_prompt(
+                question_text,
+                expected_answer,
+                answer_text,
+                missing_points,
+                hint_level,
+            )
+        )
+        return GeneratedHint(hint_text=(response.text or "").strip())
 
 
 class HeuristicProvider:
@@ -179,6 +217,24 @@ class HeuristicProvider:
             feedback=feedback,
         )
 
+    def generate_hint(
+        self,
+        question_text: str,
+        expected_answer: str,
+        answer_text: str,
+        missing_points: str,
+        hint_level: int,
+    ) -> GeneratedHint:
+        missing = missing_points or "질문에서 요구한 핵심 조건"
+        templates = {
+            1: f"방향만 잡아볼게요. 질문이 묻는 핵심 관계가 무엇인지 먼저 떠올려보세요.",
+            2: f"관련 개념을 연결해보세요. 특히 {missing} 쪽을 다시 생각해보면 좋습니다.",
+            3: "구조를 나눠보세요. 정의, 이유, 결과를 각각 한 문장으로 분리해 답해보세요.",
+            4: f"핵심 키워드는 {missing} 입니다. 이 단어들이 답변 안에서 어떤 역할을 하는지 설명해보세요.",
+            5: "거의 다 왔습니다. 답변을 '무엇인가 -> 왜 중요한가 -> 어떤 결과가 생기는가' 순서로 다시 구성해보세요.",
+        }
+        return GeneratedHint(hint_text=templates.get(hint_level, templates[1]))
+
 
 def get_llm_provider() -> LLMProvider:
     if settings.gemini_api_key:
@@ -259,6 +315,47 @@ def _build_answer_evaluation_prompt(
 
 사용자 답변:
 {answer_text}
+""".strip()
+
+
+def _build_hint_prompt(
+    question_text: str,
+    expected_answer: str,
+    answer_text: str,
+    missing_points: str,
+    hint_level: int,
+) -> str:
+    return f"""
+당신은 뇌과학 기반 AI 튜터의 Adaptive Scaffolding 모듈입니다.
+사용자가 스스로 정답에 도달하도록 힌트를 제공하세요.
+
+힌트 레벨:
+1 = 방향 힌트
+2 = 관련 개념 힌트
+3 = 구조 힌트
+4 = 핵심 키워드 힌트
+5 = 거의 정답에 가까운 힌트
+
+규칙:
+- 정답 문장을 그대로 말하지 마세요.
+- 답을 설명하지 말고 다음 사고 행동을 유도하세요.
+- 한국어 한두 문장으로 작성하세요.
+- 현재 레벨보다 더 강한 힌트를 제공하지 마세요.
+
+질문:
+{question_text}
+
+평가 기준:
+{expected_answer}
+
+사용자 답변:
+{answer_text}
+
+누락된 지점:
+{missing_points}
+
+요청 힌트 레벨:
+{hint_level}
 """.strip()
 
 

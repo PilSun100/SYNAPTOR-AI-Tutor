@@ -26,6 +26,7 @@ API docs are available at `http://localhost:8000/docs`.
 - `POST /api/materials/{material_id}/concepts/extract`
 - `POST /api/concepts/{concept_id}/questions/generate`
 - `POST /api/questions/{question_id}/answer`
+- `POST /api/answers/{answer_id}/hint`
 
 ## Test
 
