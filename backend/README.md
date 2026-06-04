@@ -28,6 +28,7 @@ API docs are available at `http://localhost:8000/docs`.
 - `POST /api/questions/{question_id}/answer`
 - `POST /api/answers/{answer_id}/hint`
 - `POST /api/concepts/{concept_id}/self-explanation`
+- `GET /api/sessions/{session_id}/report`
 
 ## Test
 
