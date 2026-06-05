@@ -1,12 +1,31 @@
 # Brain-Sync AI Tutor
 
-뇌과학 기반 능동적 학습 AI 튜터입니다. 강의 자료를 분석하여 사용자에게 정답 대신 역질문을 던지고, 스스로 답을 찾게 유도하여 장기 기억 형성을 돕는 학습 지원 시스템을 목표로 합니다.
+뇌과학 기반 능동적 학습 AI 튜터입니다. 강의 자료를 분석하여 사용자에게 정답 대신 역질문과 단계별 힌트를 제공하고, 스스로 답을 찾게 유도하여 장기 기억 형성을 돕는 학습 지원 시스템입니다.
 
 이 프로젝트는 AI 모델을 직접 학습시키기보다, Gemini API를 활용해 뇌과학 및 인지과학 기반 튜터링 로직을 구현하는 데 초점을 둡니다.
+
+## 현재 구현 상태
+
+현재 MVP는 웹 화면과 백엔드 API를 통해 아래 흐름을 끝까지 시연할 수 있습니다.
+
+```text
+PDF 업로드
+→ 텍스트 추출
+→ 핵심 개념 추출
+→ Active Recall 질문 생성
+→ 사용자 답변 평가
+→ Level 1~5 힌트 요청
+→ 자기 설명 평가
+→ 세션 리포트 조회
+```
+
+Gemini API 키가 없으면 로컬 fallback 로직으로 동작하므로, API 키 없이도 과제 시연과 테스트가 가능합니다.
 
 ## 프로젝트 목적
 
 기존 AI 학습 도구는 요약, 정답 제공, 단순 문제 생성에 치우치는 경우가 많습니다. Brain-Sync AI Tutor는 학습자가 스스로 기억을 인출하고, 오개념을 발견하고, 단계적 힌트를 통해 정답에 접근하고, 자신의 언어로 다시 설명하도록 돕습니다.
+
+이 서비스의 차별점은 **이해한 것 같은 착각을 깨는 학습 코치**라는 점입니다. 사용자가 답을 바로 보지 않고, 자신의 답변이 왜 부족한지 확인한 뒤 다시 설명하도록 설계했습니다.
 
 핵심 학습 원리는 다음과 같습니다.
 
@@ -51,6 +70,13 @@
 - **Tutor Logic**: LLM API를 활용해 사용자의 답변을 분석하고, 뇌과학 로직에 따른 다음 질문이나 힌트를 생성합니다.
 - **Socratic Interaction**: 정답을 바로 알려주지 않고 사용자의 오류 지점을 역질문과 단계별 힌트로 좁혀 갑니다.
 - **Learning Report**: 세션 종료 후 오답 패턴, 취약 개념, 다음 복습 추천을 제공합니다.
+
+## 차별화 포인트
+
+- **정답 금지 모드**: 사용자가 틀려도 바로 정답을 제공하지 않고 단계별 힌트를 제공합니다.
+- **이해 착각 탐지**: 답변 점수, 누락 개념, 오개념 여부를 분리해 보여줍니다.
+- **자기 설명 평가**: 정답 여부만 보지 않고 정확성, 완전성, 논리 연결성을 평가합니다.
+- **복습 추천**: 자기 설명과 답변 결과를 바탕으로 다음 복습 개념을 추천합니다.
 
 ## MVP 기능
 
@@ -140,7 +166,7 @@ Brain-Sync-AI-Tutor/
     demo-scenario.md
 ```
 
-## 주요 API 계획
+## 주요 API
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
@@ -148,7 +174,6 @@ Brain-Sync-AI-Tutor/
 | POST | `/api/materials/upload` | PDF 업로드 및 텍스트 추출 |
 | POST | `/api/materials/{material_id}/concepts/extract` | 핵심 개념 추출 |
 | POST | `/api/concepts/{concept_id}/questions/generate` | 개념별 질문 생성 |
-| POST | `/api/sessions/start` | 학습 세션 시작 |
 | POST | `/api/questions/{question_id}/answer` | 사용자 답변 평가 |
 | POST | `/api/answers/{answer_id}/hint` | 단계별 힌트 생성 |
 | POST | `/api/concepts/{concept_id}/self-explanation` | 자기 설명 평가 |
@@ -225,6 +250,23 @@ uvicorn app.main:app --reload
 ```
 
 API 문서는 `http://localhost:8000/docs`에서 확인할 수 있습니다.
+
+## 검증 명령
+
+### Backend
+
+```bash
+cd backend
+.venv/bin/python -m pytest tests
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm run lint
+npm run build
+```
 
 ## 데모 시나리오
 

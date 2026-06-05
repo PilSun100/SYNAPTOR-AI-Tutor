@@ -2,6 +2,26 @@
 
 이 문서는 과제 발표 또는 시연에서 사용할 기본 흐름입니다.
 
+## 준비
+
+백엔드와 프론트엔드를 각각 실행합니다.
+
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --reload
+```
+
+```bash
+cd frontend
+npm run dev
+```
+
+시연 주소:
+
+- Web: `http://localhost:5173/study`
+- API Docs: `http://localhost:8000/docs`
+
 ## Scenario
 
 1. React 웹 앱을 엽니다.
@@ -18,9 +38,18 @@
 12. 정답에 도달하면 사용자가 자기 설명을 제출합니다.
 13. 세션 종료 후 리포트에서 스스로 맞힌 개념, 힌트 후 맞힌 개념, 반복 오답 개념, 다음 복습 추천을 확인합니다.
 
+## 발표 순서
+
+1. GitHub 브랜치 히스토리로 기능별 개발 과정을 보여줍니다.
+2. `/docs`에서 FastAPI API 구조를 먼저 보여줍니다.
+3. `/study` 화면에서 PDF 업로드부터 리포트 조회까지 시연합니다.
+4. Gemini API 키가 없는 경우에도 fallback으로 동작한다는 점을 설명합니다.
+5. 마지막에 정답 제공 서비스가 아니라 이해 착각을 깨는 학습 코치라는 차별점을 강조합니다.
+
 ## Presentation Points
 
 - 이 프로젝트는 단순 요약 서비스가 아니라 능동적 회상 기반 AI 튜터입니다.
 - 정답을 바로 알려주지 않고 예측 오류와 단계적 힌트를 통해 학습자가 스스로 도달하게 합니다.
+- 답변 평가, 힌트, 자기 설명, 리포트가 하나의 Neuro-Learning Loop로 연결됩니다.
 - 웹 UI와 API 서버를 함께 제공하므로 시연성과 구조 설명이 모두 가능합니다.
 - 기능별 Git branch와 commit으로 개발 과정을 확인할 수 있습니다.

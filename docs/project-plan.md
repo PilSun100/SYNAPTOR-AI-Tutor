@@ -27,7 +27,8 @@ Brain-Sync AI Tutor는 PDF 또는 텍스트 학습 자료를 기반으로 사용
 | 7 | `feature/adaptive-hinting` | Level 1~5 scaffolding hints |
 | 8 | `feature/self-explanation` | Self explanation evaluation |
 | 9 | `feature/session-report` | Report API and UI |
-| 10 | `feature/submission-polish` | Demo, screenshots, final README |
+| 10 | `feature/frontend-study-flow` | Study Room UI and API integration |
+| 11 | `feature/submission-polish` | Demo, final README, verification checklist |
 
 ## MVP Acceptance Criteria
 
@@ -40,6 +41,7 @@ Brain-Sync AI Tutor는 PDF 또는 텍스트 학습 자료를 기반으로 사용
 - The user can request progressive hints.
 - The user can submit a self explanation.
 - A final report summarizes weak concepts and next review targets.
+- The Study Room UI can demonstrate the full flow without using Swagger directly.
 
 ## Scope Control
 
