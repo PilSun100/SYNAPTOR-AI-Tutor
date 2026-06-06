@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.learning import LearningSession, Question, UserAnswer
+from app.services.adaptive_learning_service import AdaptiveLearningState, build_adaptive_state, update_mastery_from_answer
 from app.services.llm_provider import LLMProvider
 
 
@@ -11,7 +12,7 @@ def evaluate_and_store_answer(
     provider: LLMProvider,
     session_id: int | None = None,
     response_time: float | None = None,
-) -> tuple[str, UserAnswer, str]:
+) -> tuple[str, UserAnswer, str, AdaptiveLearningState]:
     session = _resolve_session(db, question, session_id)
     evaluation = provider.evaluate_answer(
         question_text=question.question_text,
@@ -30,10 +31,13 @@ def evaluate_and_store_answer(
     )
 
     db.add(user_answer)
+    db.flush()
+    mastery = update_mastery_from_answer(db, user_answer)
+    adaptive_state = build_adaptive_state(question.concept, mastery)
     db.commit()
     db.refresh(user_answer)
 
-    return provider.source, user_answer, evaluation.feedback
+    return provider.source, user_answer, evaluation.feedback, adaptive_state
 
 
 def _resolve_session(

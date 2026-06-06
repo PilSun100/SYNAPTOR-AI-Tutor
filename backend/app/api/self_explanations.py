@@ -1,9 +1,12 @@
+from dataclasses import asdict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db
 from app.models.learning import Concept
 from app.schemas.self_explanations import SelfExplanationRequest, SelfExplanationResponse
+from app.services.adaptive_learning_service import build_adaptive_state
 from app.services.llm_provider import get_llm_provider
 from app.services.self_explanation_service import evaluate_and_store_self_explanation
 
@@ -52,6 +55,7 @@ def submit_self_explanation(
         mastery_level=mastery.mastery_level,
         next_review_at=mastery.next_review_at,
         feedback=feedback,
+        adaptive_state=asdict(build_adaptive_state(concept, mastery)),
         source=source,
         created_at=self_explanation.created_at,
     )

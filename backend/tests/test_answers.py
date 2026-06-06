@@ -59,6 +59,10 @@ def test_submit_answer_evaluates_and_stores_result() -> None:
         assert body["source"] in {"heuristic", "gemini"}
         assert body["feedback"]
         assert body["response_time"] == 12.5
+        assert body["adaptive_state"]["learner_level_label"]
+        assert body["adaptive_state"]["next_difficulty"] in {"easy", "medium", "hard"}
+        assert body["adaptive_state"]["next_question_type"]
+        assert body["adaptive_state"]["personalized_explanation"]
 
 
 def test_submit_answer_returns_404_for_missing_question() -> None:

@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models.learning import HintLog, UserAnswer
+from app.services.adaptive_learning_service import register_hint_use
 from app.services.llm_provider import LLMProvider
 
 
@@ -35,6 +36,7 @@ def generate_and_store_hint(
         hint_text=hint.hint_text,
     )
     db.add(hint_log)
+    register_hint_use(db, user_answer)
     db.commit()
     db.refresh(hint_log)
 

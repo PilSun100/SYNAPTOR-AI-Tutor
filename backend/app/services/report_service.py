@@ -1,6 +1,8 @@
 from collections import defaultdict
+from dataclasses import asdict
 
 from app.models.learning import LearningSession, UserAnswer
+from app.services.adaptive_learning_service import build_adaptive_state
 from app.schemas.reports import ReportConceptItem, SessionReportResponse
 
 CORRECT_THRESHOLD = 0.7
@@ -20,6 +22,7 @@ def build_session_report(session: LearningSession) -> SessionReportResponse:
     hinted_correct_concepts = []
     repeated_wrong_concepts = []
     next_review_concepts = []
+    adaptive_summary = []
 
     self_correct_count = 0
     hinted_correct_count = 0
@@ -33,10 +36,15 @@ def build_session_report(session: LearningSession) -> SessionReportResponse:
             concept_id=concept_id,
             title=concept.title,
             mastery_level=mastery.mastery_level if mastery else None,
+            learner_level_label=mastery.learner_level_label if mastery else None,
+            next_difficulty=mastery.next_difficulty if mastery else None,
+            next_question_type=mastery.next_question_type if mastery else None,
             next_review_at=mastery.next_review_at if mastery else None,
             reason="이번 세션에서 학습한 개념입니다.",
         )
         studied_concepts.append(item)
+        if mastery:
+            adaptive_summary.append(asdict(build_adaptive_state(concept, mastery)))
 
         if any(_is_self_correct(answer) for answer in grouped_answers):
             self_correct_count += 1
@@ -71,6 +79,7 @@ def build_session_report(session: LearningSession) -> SessionReportResponse:
         hinted_correct_concepts=hinted_correct_concepts,
         repeated_wrong_concepts=repeated_wrong_concepts,
         next_review_concepts=next_review_concepts,
+        adaptive_summary=adaptive_summary,
     )
 
 
@@ -84,6 +93,9 @@ def _concept_item(
     concept_id: int,
     title: str,
     mastery_level: float | None,
+    learner_level_label: str | None,
+    next_difficulty: str | None,
+    next_question_type: str | None,
     next_review_at,
     reason: str,
 ) -> ReportConceptItem:
@@ -91,6 +103,9 @@ def _concept_item(
         concept_id=concept_id,
         title=title,
         mastery_level=mastery_level,
+        learner_level_label=learner_level_label,
+        next_difficulty=next_difficulty,
+        next_question_type=next_question_type,
         next_review_at=next_review_at,
         reason=reason,
     )

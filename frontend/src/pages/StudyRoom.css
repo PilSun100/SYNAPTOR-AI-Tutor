@@ -101,6 +101,10 @@
   font-size: 1.15rem;
 }
 
+.panel-title h3 {
+  font-size: 1.05rem;
+}
+
 .upload-box {
   min-height: 92px;
   border: 1px dashed var(--border-highlight);
@@ -229,6 +233,7 @@
 
 .question-box span,
 .hint-card span,
+.review-item span,
 .metric-card span,
 .report-metrics span {
   color: var(--text-secondary);
@@ -297,6 +302,57 @@
   background: rgba(251, 191, 36, 0.08);
 }
 
+.adaptive-coach {
+  border: 1px solid rgba(20, 184, 166, 0.32);
+  border-radius: 8px;
+  background: rgba(20, 184, 166, 0.08);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.adaptive-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.adaptive-metrics div {
+  min-height: 70px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px;
+}
+
+.adaptive-metrics span,
+.adaptive-guidance span {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.adaptive-metrics strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.adaptive-guidance {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.adaptive-guidance p {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .report-content {
   display: flex;
   flex-direction: column;
@@ -356,6 +412,7 @@
   .study-grid,
   .evaluation-grid,
   .compact-grid,
+  .adaptive-metrics,
   .report-metrics {
     grid-template-columns: 1fr;
   }

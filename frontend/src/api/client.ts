@@ -49,6 +49,7 @@ export function submitAnswer(
   questionId: number,
   answerText: string,
   responseTime?: number,
+  sessionId?: number | null,
 ): Promise<AnswerEvaluationResponse> {
   return request<AnswerEvaluationResponse>(`/questions/${questionId}/answer`, {
     method: 'POST',
@@ -56,6 +57,7 @@ export function submitAnswer(
     body: JSON.stringify({
       answer_text: answerText,
       response_time: responseTime,
+      session_id: sessionId,
     }),
   });
 }

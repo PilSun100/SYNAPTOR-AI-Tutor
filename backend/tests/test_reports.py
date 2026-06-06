@@ -85,6 +85,9 @@ def test_get_session_report_returns_learning_summary() -> None:
         assert isinstance(body["hinted_correct_concepts"], list)
         assert isinstance(body["repeated_wrong_concepts"], list)
         assert body["next_review_concepts"]
+        assert body["adaptive_summary"]
+        assert body["adaptive_summary"][0]["learner_level_label"]
+        assert body["studied_concepts"][0]["next_question_type"]
 
 
 def test_get_session_report_returns_404_for_missing_session() -> None:

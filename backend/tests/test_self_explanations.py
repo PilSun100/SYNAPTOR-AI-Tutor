@@ -58,6 +58,8 @@ def test_submit_self_explanation_updates_mastery() -> None:
         assert 0 <= body["mastery_level"] <= 1
         assert body["next_review_at"]
         assert body["feedback"]
+        assert body["adaptive_state"]["learner_level_label"]
+        assert body["adaptive_state"]["recommended_strategy"]
         assert body["source"] in {"heuristic", "gemini"}
 
 

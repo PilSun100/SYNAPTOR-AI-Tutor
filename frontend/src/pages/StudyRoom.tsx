@@ -4,6 +4,7 @@ import {
   BrainCircuit,
   CheckCircle2,
   FileUp,
+  Gauge,
   HelpCircle,
   ListChecks,
   MessageSquareText,
@@ -33,6 +34,29 @@ import './StudyRoom.css';
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
+const questionTypeLabels: Record<string, string> = {
+  definition: '정의형',
+  cause_effect: '원인-결과형',
+  example: '예시 생성형',
+  application: '적용형',
+  misconception_check: '오개념 점검형',
+};
+
+const normalizeQuestionType = (type: string) => type.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+
+const matchesRecommendedType = (questionType: string, recommendedType: string) => {
+  const normalizedQuestion = normalizeQuestionType(questionType);
+  const normalizedRecommended = normalizeQuestionType(recommendedType);
+
+  if (normalizedRecommended === 'example') {
+    return normalizedQuestion.includes('example') || normalizedQuestion.includes('application');
+  }
+  if (normalizedRecommended === 'misconception_check') {
+    return normalizedQuestion.includes('definition') || normalizedQuestion.includes('compare');
+  }
+  return normalizedQuestion.includes(normalizedRecommended);
+};
+
 export const StudyRoom = () => {
   const [file, setFile] = useState<File | null>(null);
   const [material, setMaterial] = useState<MaterialUploadResponse | null>(null);
@@ -40,6 +64,7 @@ export const StudyRoom = () => {
   const [selectedConcept, setSelectedConcept] = useState<Concept | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
+  const [sessionId, setSessionId] = useState<number | null>(null);
   const [answerText, setAnswerText] = useState('');
   const [answerStartedAt, setAnswerStartedAt] = useState<number | null>(null);
   const [answer, setAnswer] = useState<AnswerEvaluationResponse | null>(null);
@@ -52,6 +77,7 @@ export const StudyRoom = () => {
 
   const canRequestHint = Boolean(answer && hints.length < 5);
   const currentHintLevel = hints.length + 1;
+  const adaptiveState = selfExplanation?.adaptive_state ?? answer?.adaptive_state ?? report?.adaptive_summary[0] ?? null;
 
   const steps = useMemo(
     () => [
@@ -90,6 +116,7 @@ export const StudyRoom = () => {
       setSelectedConcept(null);
       setQuestions([]);
       setActiveQuestion(null);
+      setSessionId(null);
       setAnswer(null);
       setHints([]);
       setSelfExplanation(null);
@@ -109,6 +136,7 @@ export const StudyRoom = () => {
       setSelectedConcept(extracted.concepts[0] ?? null);
       setQuestions([]);
       setActiveQuestion(null);
+      setSessionId(null);
       setAnswer(null);
       setHints([]);
       setSelfExplanation(null);
@@ -121,6 +149,7 @@ export const StudyRoom = () => {
       setSelectedConcept(concept);
       setQuestions(generated.questions);
       setActiveQuestion(generated.questions[0] ?? null);
+      setSessionId(null);
       setAnswerStartedAt(Date.now());
       setAnswer(null);
       setHints([]);
@@ -140,8 +169,9 @@ export const StudyRoom = () => {
       }
 
       const responseTime = answerStartedAt ? (Date.now() - answerStartedAt) / 1000 : undefined;
-      const evaluated = await submitAnswer(activeQuestion.id, answerText, responseTime);
+      const evaluated = await submitAnswer(activeQuestion.id, answerText, responseTime, sessionId);
       setAnswer(evaluated);
+      setSessionId(evaluated.session_id);
       setHints([]);
       setReport(null);
     });
@@ -168,21 +198,48 @@ export const StudyRoom = () => {
       const evaluated = await submitSelfExplanation(selectedConcept.id, selfExplanationText);
       setSelfExplanation(evaluated);
 
-      if (answer?.session_id) {
-        const sessionReport = await getSessionReport(answer.session_id);
+      if (sessionId) {
+        const sessionReport = await getSessionReport(sessionId);
         setReport(sessionReport);
       }
     });
 
   const handleLoadReport = () =>
     runAction('리포트 조회 중', async () => {
-      if (!answer?.session_id) {
+      if (!sessionId) {
         throw new Error('답변 평가 후 리포트를 조회할 수 있습니다.');
       }
 
-      const sessionReport = await getSessionReport(answer.session_id);
+      const sessionReport = await getSessionReport(sessionId);
       setReport(sessionReport);
     });
+
+  const handleMoveToAdaptiveQuestion = () => {
+    if (!adaptiveState || !activeQuestion || questions.length === 0) {
+      return;
+    }
+
+    const currentIndex = questions.findIndex((question) => question.id === activeQuestion.id);
+    const recommended = questions.find(
+      (question) =>
+        question.id !== activeQuestion.id &&
+        matchesRecommendedType(question.question_type, adaptiveState.next_question_type),
+    );
+    const fallback = questions[(currentIndex + 1 + questions.length) % questions.length];
+    const nextQuestion = recommended ?? fallback;
+
+    if (!nextQuestion || nextQuestion.id === activeQuestion.id) {
+      return;
+    }
+
+    setActiveQuestion(nextQuestion);
+    setAnswerText('');
+    setAnswer(null);
+    setHints([]);
+    setSelfExplanation(null);
+    setReport(null);
+    setAnswerStartedAt(Date.now());
+  };
 
   return (
     <div className="study-room">
@@ -335,6 +392,45 @@ export const StudyRoom = () => {
               )}
             </div>
           )}
+
+          {adaptiveState && (
+            <div className="adaptive-coach">
+              <div className="panel-title">
+                <Gauge size={19} />
+                <h3>개인화 코치</h3>
+              </div>
+              <div className="adaptive-metrics">
+                <div>
+                  <span>현재 수준</span>
+                  <strong>{adaptiveState.learner_level_label}</strong>
+                </div>
+                <div>
+                  <span>숙련도</span>
+                  <strong>{formatPercent(adaptiveState.mastery_level)}</strong>
+                </div>
+                <div>
+                  <span>인지 부하</span>
+                  <strong>{formatPercent(adaptiveState.cognitive_load_score)}</strong>
+                </div>
+              </div>
+              <div className="adaptive-guidance">
+                <span>
+                  다음 질문: {adaptiveState.next_difficulty} ·{' '}
+                  {questionTypeLabels[adaptiveState.next_question_type] ?? adaptiveState.next_question_type}
+                </span>
+                <p>{adaptiveState.personalized_explanation}</p>
+                <p>{adaptiveState.recommended_strategy}</p>
+              </div>
+              <button
+                className="secondary-btn full-button"
+                disabled={!activeQuestion || questions.length < 2 || Boolean(loadingLabel)}
+                onClick={handleMoveToAdaptiveQuestion}
+              >
+                <PlayCircle size={18} />
+                추천 질문으로 진행
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="glass-panel workflow-panel">
@@ -399,7 +495,7 @@ export const StudyRoom = () => {
             <BrainCircuit size={20} />
             <h2>세션 리포트</h2>
           </div>
-          <button className="secondary-btn full-button" disabled={!answer?.session_id || Boolean(loadingLabel)} onClick={handleLoadReport}>
+          <button className="secondary-btn full-button" disabled={!sessionId || Boolean(loadingLabel)} onClick={handleLoadReport}>
             <RefreshCcw size={18} />
             리포트 조회
           </button>
@@ -424,7 +520,13 @@ export const StudyRoom = () => {
                 {report.next_review_concepts.map((concept) => (
                   <div className="review-item" key={concept.concept_id}>
                     <strong>{concept.title}</strong>
-                    <p>{concept.reason}</p>
+                    <p>{concept.learner_level_label ?? concept.reason}</p>
+                    <span>
+                      다음: {concept.next_difficulty ?? 'adaptive'} ·{' '}
+                      {concept.next_question_type
+                        ? questionTypeLabels[concept.next_question_type] ?? concept.next_question_type
+                        : '복습'}
+                    </span>
                   </div>
                 ))}
               </div>

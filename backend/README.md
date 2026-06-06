@@ -2,6 +2,11 @@
 
 FastAPI backend for Brain-Sync AI Tutor.
 
+The backend now includes an Adaptive Learning Engine. It updates each
+concept mastery record from answer quality, response time, misconception
+signals, and hint use, then returns a personalized learning state with the
+next difficulty, next question type, learner level, and tailored explanation.
+
 ## Setup
 
 ```bash
@@ -29,6 +34,9 @@ API docs are available at `http://localhost:8000/docs`.
 - `POST /api/answers/{answer_id}/hint`
 - `POST /api/concepts/{concept_id}/self-explanation`
 - `GET /api/sessions/{session_id}/report`
+
+Answer, self-explanation, and report responses include `adaptive_state` or
+`adaptive_summary` fields for personalized learning guidance.
 
 ## Test
 

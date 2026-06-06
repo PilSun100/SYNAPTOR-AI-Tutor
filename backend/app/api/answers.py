@@ -1,3 +1,5 @@
+from dataclasses import asdict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -30,7 +32,7 @@ def submit_answer(
     provider = get_llm_provider()
 
     try:
-        source, user_answer, feedback = evaluate_and_store_answer(
+        source, user_answer, feedback, adaptive_state = evaluate_and_store_answer(
             db=db,
             question=question,
             answer_text=payload.answer_text,
@@ -54,6 +56,7 @@ def submit_answer(
         misconception_detected=user_answer.misconception_detected,
         response_time=user_answer.response_time,
         feedback=feedback,
+        adaptive_state=asdict(adaptive_state),
         source=source,
         created_at=user_answer.created_at,
     )
