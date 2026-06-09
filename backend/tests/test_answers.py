@@ -1,7 +1,10 @@
 import fitz
 from fastapi.testclient import TestClient
 
+from app.db.session import SessionLocal
 from app.main import create_app
+from app.models.learning import EvidenceLog, LearningSession
+from auth_helpers import auth_headers
 
 
 def make_pdf_bytes(text: str) -> bytes:
@@ -11,7 +14,7 @@ def make_pdf_bytes(text: str) -> bytes:
     return document.tobytes()
 
 
-def create_question(client: TestClient) -> int:
+def create_question(client: TestClient, headers: dict[str, str]) -> int:
     upload_response = client.post(
         "/api/materials/upload",
         files={
@@ -24,22 +27,25 @@ def create_question(client: TestClient) -> int:
                 "application/pdf",
             )
         },
+        headers=headers,
     )
     assert upload_response.status_code == 201
 
     material_id = upload_response.json()["id"]
-    concept_response = client.post(f"/api/materials/{material_id}/concepts/extract")
+    concept_response = client.post(f"/api/materials/{material_id}/concepts/extract", headers=headers)
     assert concept_response.status_code == 201
 
     concept_id = concept_response.json()["concepts"][0]["id"]
-    question_response = client.post(f"/api/concepts/{concept_id}/questions/generate")
+    question_response = client.post(f"/api/concepts/{concept_id}/questions/generate", headers=headers)
     assert question_response.status_code == 201
     return int(question_response.json()["questions"][0]["id"])
 
 
 def test_submit_answer_evaluates_and_stores_result() -> None:
     with TestClient(create_app()) as client:
-        question_id = create_question(client)
+        headers = auth_headers(client)
+        me = client.get("/api/auth/me", headers=headers).json()
+        question_id = create_question(client, headers)
 
         response = client.post(
             f"/api/questions/{question_id}/answer",
@@ -47,6 +53,7 @@ def test_submit_answer_evaluates_and_stores_result() -> None:
                 "answer_text": "Active recall is retrieving information before seeing the answer.",
                 "response_time": 12.5,
             },
+            headers=headers,
         )
 
         body = response.json()
@@ -59,13 +66,37 @@ def test_submit_answer_evaluates_and_stores_result() -> None:
         assert body["source"] in {"heuristic", "gemini"}
         assert body["feedback"]
         assert body["response_time"] == 12.5
+        assert body["adaptive_state"]["learner_level_label"]
+        assert body["adaptive_state"]["next_difficulty"] in {"easy", "medium", "hard"}
+        assert body["adaptive_state"]["next_question_type"]
+        assert body["adaptive_state"]["personalized_explanation"]
+        assert body["evidence"]
+        assert body["evidence"][0]["chunk_id"] > 0
+        assert body["evidence"][0]["page_number"] >= 1
+        assert body["evidence"][0]["snippet"]
+
+        with SessionLocal() as db:
+            evidence_count = (
+                db.query(EvidenceLog)
+                .filter(
+                    EvidenceLog.related_answer_id == body["id"],
+                    EvidenceLog.purpose == "answer_evaluation",
+                )
+                .count()
+            )
+            assert evidence_count > 0
+            session = db.get(LearningSession, body["session_id"])
+            assert session is not None
+            assert session.user_id == me["id"]
 
 
 def test_submit_answer_returns_404_for_missing_question() -> None:
     with TestClient(create_app()) as client:
+        headers = auth_headers(client)
         response = client.post(
             "/api/questions/999999/answer",
             json={"answer_text": "I do not know yet."},
+            headers=headers,
         )
 
         assert response.status_code == 404

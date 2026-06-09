@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.dependencies import get_db
-from app.models.learning import UserAnswer
+from app.db.dependencies import get_current_user, get_db
+from app.models.learning import User, UserAnswer
 from app.schemas.hints import HintRequest, HintResponse
 from app.services.hint_service import generate_and_store_hint
 from app.services.llm_provider import get_llm_provider
+from app.services.ownership_service import ensure_answer_owner
+from app.services.retrieval_service import evidence_snippets
 
 router = APIRouter()
 
@@ -19,6 +21,7 @@ def request_hint(
     answer_id: int,
     payload: HintRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> HintResponse:
     user_answer = db.get(UserAnswer, answer_id)
     if user_answer is None:
@@ -26,11 +29,12 @@ def request_hint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="사용자 답변을 찾을 수 없습니다.",
         )
+    ensure_answer_owner(user_answer, current_user)
 
     provider = get_llm_provider()
 
     try:
-        source, hint_log = generate_and_store_hint(
+        source, hint_log, evidence_chunks = generate_and_store_hint(
             db=db,
             user_answer=user_answer,
             hint_level=payload.hint_level,
@@ -47,6 +51,7 @@ def request_hint(
         user_answer_id=hint_log.user_answer_id,
         hint_level=hint_log.hint_level,
         hint_text=hint_log.hint_text,
+        evidence=evidence_snippets(evidence_chunks),
         source=source,
         created_at=hint_log.created_at,
     )

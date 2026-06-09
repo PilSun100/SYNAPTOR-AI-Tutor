@@ -1,7 +1,10 @@
 import fitz
 from fastapi.testclient import TestClient
 
+from app.db.session import SessionLocal
 from app.main import create_app
+from app.models.learning import MaterialChunk
+from auth_helpers import auth_headers
 
 
 def make_pdf_bytes(text: str) -> bytes:
@@ -15,9 +18,11 @@ def test_upload_material_extracts_text_and_stores_metadata() -> None:
     pdf_bytes = make_pdf_bytes("Active recall strengthens long-term memory.")
 
     with TestClient(create_app()) as client:
+        headers = auth_headers(client)
         response = client.post(
             "/api/materials/upload",
             files={"file": ("neuro-learning.pdf", pdf_bytes, "application/pdf")},
+            headers=headers,
         )
 
         body = response.json()
@@ -27,12 +32,27 @@ def test_upload_material_extracts_text_and_stores_metadata() -> None:
         assert body["extracted_text_length"] > 0
         assert "Active recall" in body["preview"]
 
+        with SessionLocal() as db:
+            chunks = (
+                db.query(MaterialChunk)
+                .filter(MaterialChunk.material_id == body["id"])
+                .order_by(MaterialChunk.chunk_index.asc())
+                .all()
+            )
+            assert chunks
+            assert chunks[0].page_number == 1
+            assert chunks[0].chunk_index == 0
+            assert chunks[0].char_start >= 0
+            assert chunks[0].char_end > chunks[0].char_start
+
 
 def test_upload_material_rejects_non_pdf_file() -> None:
     with TestClient(create_app()) as client:
+        headers = auth_headers(client)
         response = client.post(
             "/api/materials/upload",
             files={"file": ("notes.txt", b"not a pdf", "text/plain")},
+            headers=headers,
         )
 
         assert response.status_code == 400

@@ -1,10 +1,14 @@
+from dataclasses import asdict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.dependencies import get_db
-from app.models.learning import Concept
+from app.db.dependencies import get_current_user, get_db
+from app.models.learning import Concept, User
 from app.schemas.self_explanations import SelfExplanationRequest, SelfExplanationResponse
+from app.services.adaptive_learning_service import build_adaptive_state
 from app.services.llm_provider import get_llm_provider
+from app.services.ownership_service import ensure_concept_owner
 from app.services.self_explanation_service import evaluate_and_store_self_explanation
 
 router = APIRouter()
@@ -19,6 +23,7 @@ def submit_self_explanation(
     concept_id: int,
     payload: SelfExplanationRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> SelfExplanationResponse:
     concept = db.get(Concept, concept_id)
     if concept is None:
@@ -26,6 +31,7 @@ def submit_self_explanation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="개념을 찾을 수 없습니다.",
         )
+    ensure_concept_owner(concept, current_user)
 
     provider = get_llm_provider()
 
@@ -35,6 +41,7 @@ def submit_self_explanation(
             concept=concept,
             explanation_text=payload.explanation_text,
             provider=provider,
+            user_id=current_user.id,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -52,6 +59,7 @@ def submit_self_explanation(
         mastery_level=mastery.mastery_level,
         next_review_at=mastery.next_review_at,
         feedback=feedback,
+        adaptive_state=asdict(build_adaptive_state(concept, mastery)),
         source=source,
         created_at=self_explanation.created_at,
     )

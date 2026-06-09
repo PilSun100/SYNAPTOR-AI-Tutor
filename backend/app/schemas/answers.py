@@ -2,6 +2,9 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.adaptive import AdaptiveLearningStateResponse
+from app.schemas.evidence import EvidenceSnippetResponse
+
 
 class AnswerSubmitRequest(BaseModel):
     answer_text: str = Field(..., min_length=1)
@@ -19,6 +22,8 @@ class AnswerEvaluationResponse(BaseModel):
     misconception_detected: bool
     response_time: float | None
     feedback: str
+    adaptive_state: AdaptiveLearningStateResponse
+    evidence: list[EvidenceSnippetResponse]
     source: str
     created_at: datetime
 

@@ -7,6 +7,21 @@ export type MaterialUploadResponse = {
   created_at: string;
 };
 
+export type User = {
+  id: number;
+  email: string;
+  display_name: string;
+  created_at: string;
+};
+
+export type AuthResponse = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
+};
+
 export type Concept = {
   id: number;
   material_id: number;
@@ -40,6 +55,25 @@ export type QuestionGenerationResponse = {
   questions: Question[];
 };
 
+export type AdaptiveLearningState = {
+  mastery_level: number;
+  confidence_score: number;
+  cognitive_load_score: number;
+  learner_level_label: string;
+  next_difficulty: string;
+  next_question_type: string;
+  recommended_strategy: string;
+  personalized_explanation: string;
+  next_review_at: string | null;
+};
+
+export type EvidenceSnippet = {
+  chunk_id: number;
+  page_number: number;
+  snippet: string;
+  relevance_score: number;
+};
+
 export type AnswerEvaluationResponse = {
   id: number;
   session_id: number;
@@ -50,6 +84,8 @@ export type AnswerEvaluationResponse = {
   misconception_detected: boolean;
   response_time: number | null;
   feedback: string;
+  adaptive_state: AdaptiveLearningState;
+  evidence: EvidenceSnippet[];
   source: string;
   created_at: string;
 };
@@ -59,6 +95,7 @@ export type HintResponse = {
   user_answer_id: number;
   hint_level: number;
   hint_text: string;
+  evidence: EvidenceSnippet[];
   source: string;
   created_at: string;
 };
@@ -73,6 +110,7 @@ export type SelfExplanationResponse = {
   mastery_level: number;
   next_review_at: string | null;
   feedback: string;
+  adaptive_state: AdaptiveLearningState;
   source: string;
   created_at: string;
 };
@@ -81,6 +119,9 @@ export type ReportConceptItem = {
   concept_id: number;
   title: string;
   mastery_level: number | null;
+  learner_level_label: string | null;
+  next_difficulty: string | null;
+  next_question_type: string | null;
   next_review_at: string | null;
   reason: string;
 };
@@ -102,4 +143,5 @@ export type SessionReportResponse = {
   hinted_correct_concepts: ReportConceptItem[];
   repeated_wrong_concepts: ReportConceptItem[];
   next_review_concepts: ReportConceptItem[];
+  adaptive_summary: AdaptiveLearningState[];
 };

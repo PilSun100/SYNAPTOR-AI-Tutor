@@ -1,11 +1,15 @@
+from dataclasses import asdict
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.dependencies import get_db
-from app.models.learning import Question
+from app.db.dependencies import get_current_user, get_db
+from app.models.learning import Question, User
 from app.schemas.answers import AnswerEvaluationResponse, AnswerSubmitRequest
 from app.services.answer_service import evaluate_and_store_answer
 from app.services.llm_provider import get_llm_provider
+from app.services.ownership_service import ensure_question_owner
+from app.services.retrieval_service import evidence_snippets
 
 router = APIRouter()
 
@@ -19,6 +23,7 @@ def submit_answer(
     question_id: int,
     payload: AnswerSubmitRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> AnswerEvaluationResponse:
     question = db.get(Question, question_id)
     if question is None:
@@ -26,15 +31,17 @@ def submit_answer(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="질문을 찾을 수 없습니다.",
         )
+    ensure_question_owner(question, current_user)
 
     provider = get_llm_provider()
 
     try:
-        source, user_answer, feedback = evaluate_and_store_answer(
+        source, user_answer, feedback, adaptive_state, evidence_chunks = evaluate_and_store_answer(
             db=db,
             question=question,
             answer_text=payload.answer_text,
             provider=provider,
+            user=current_user,
             session_id=payload.session_id,
             response_time=payload.response_time,
         )
@@ -54,6 +61,8 @@ def submit_answer(
         misconception_detected=user_answer.misconception_detected,
         response_time=user_answer.response_time,
         feedback=feedback,
+        adaptive_state=asdict(adaptive_state),
+        evidence=evidence_snippets(evidence_chunks),
         source=source,
         created_at=user_answer.created_at,
     )

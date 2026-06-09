@@ -2,11 +2,16 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.adaptive import AdaptiveLearningStateResponse
+
 
 class ReportConceptItem(BaseModel):
     concept_id: int
     title: str
     mastery_level: float | None = None
+    learner_level_label: str | None = None
+    next_difficulty: str | None = None
+    next_question_type: str | None = None
     next_review_at: datetime | None = None
     reason: str
 
@@ -28,3 +33,4 @@ class SessionReportResponse(BaseModel):
     hinted_correct_concepts: list[ReportConceptItem]
     repeated_wrong_concepts: list[ReportConceptItem]
     next_review_concepts: list[ReportConceptItem]
+    adaptive_summary: list[AdaptiveLearningStateResponse]
