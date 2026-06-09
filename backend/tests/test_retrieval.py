@@ -44,7 +44,6 @@ def test_retrieve_chunks_by_query_returns_relevant_material_chunks() -> None:
         assert chunks[0].semantic_score > 0
         assert "Active recall" in chunks[0].chunk.content
 
-
 def test_upload_stores_material_chunk_embeddings() -> None:
     with TestClient(create_app()) as client:
         headers = auth_headers(client)
