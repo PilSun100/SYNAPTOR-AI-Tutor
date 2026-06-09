@@ -297,6 +297,8 @@ API 문서는 `http://localhost:8000/docs`에서 확인할 수 있습니다.
 
 인증 이후 대부분의 학습 API는 `Authorization: Bearer <access_token>` 헤더가 필요합니다. 프론트엔드는 로그인 후 access token을 자동으로 첨부하고, 만료 시 refresh token으로 한 번 재발급을 시도합니다.
 
+운영 배포 시에는 `ENVIRONMENT=production`을 설정하고, `JWT_SECRET_KEY`를 32자 이상의 고유한 값으로 교체해야 합니다. 기본 개발용 secret을 그대로 두면 서버가 시작되지 않습니다.
+
 ## 검증 명령
 
 ### Backend

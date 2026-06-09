@@ -24,6 +24,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    settings.validate_runtime_security()
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,

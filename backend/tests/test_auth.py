@@ -1,7 +1,9 @@
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings
 from app.main import create_app
 
 
@@ -68,3 +70,24 @@ def test_protected_endpoint_requires_token() -> None:
         response = client.post("/api/materials/999999/concepts/extract")
 
         assert response.status_code == 401
+
+
+def test_production_rejects_default_jwt_secret() -> None:
+    production_settings = Settings(
+        _env_file=None,
+        environment="production",
+        jwt_secret_key="change-this-development-secret",
+    )
+
+    with pytest.raises(RuntimeError):
+        production_settings.validate_runtime_security()
+
+
+def test_production_accepts_strong_custom_jwt_secret() -> None:
+    production_settings = Settings(
+        _env_file=None,
+        environment="production",
+        jwt_secret_key="brain-sync-production-secret-at-least-32-chars",
+    )
+
+    production_settings.validate_runtime_security()
