@@ -12,6 +12,10 @@ material chunks, retrieval selects the most relevant chunks for questions,
 answers, hints, and self-explanations, and answer/hint responses return PDF
 evidence snippets.
 
+RAG retrieval now stores embeddings on `material_chunks` and combines lexical
+matching with vector cosine similarity. PostgreSQL uses pgvector through
+Alembic migrations, while local SQLite tests store embeddings as JSON text.
+
 This branch adds production-oriented authentication. Users register or log in
 with email/password, receive JWT access tokens and refresh tokens, and learning
 materials, sessions, and mastery records are scoped to the authenticated user.
