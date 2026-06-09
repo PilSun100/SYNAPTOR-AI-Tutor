@@ -12,6 +12,10 @@ material chunks, retrieval selects the most relevant chunks for questions,
 answers, hints, and self-explanations, and answer/hint responses return PDF
 evidence snippets.
 
+This branch adds production-oriented authentication. Users register or log in
+with email/password, receive JWT access tokens and refresh tokens, and learning
+materials, sessions, and mastery records are scoped to the authenticated user.
+
 ## Setup
 
 ```bash
@@ -42,6 +46,10 @@ API docs are available at `http://localhost:8000/docs`.
 ## Current endpoints
 
 - `GET /api/health`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/refresh`
+- `GET /api/auth/me`
 - `POST /api/materials/upload`
 - `POST /api/materials/{material_id}/concepts/extract`
 - `POST /api/concepts/{concept_id}/questions/generate`
@@ -52,6 +60,15 @@ API docs are available at `http://localhost:8000/docs`.
 
 Answer, self-explanation, and report responses include `adaptive_state` or
 `adaptive_summary` fields for personalized learning guidance.
+
+Most learning endpoints require:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+Ownership checks return `404` for resources that do not belong to the current
+user so the API does not leak the existence of another user's learning data.
 
 ## Test
 

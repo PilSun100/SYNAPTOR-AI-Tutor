@@ -7,6 +7,21 @@ export type MaterialUploadResponse = {
   created_at: string;
 };
 
+export type User = {
+  id: number;
+  email: string;
+  display_name: string;
+  created_at: string;
+};
+
+export type AuthResponse = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
+};
+
 export type Concept = {
   id: number;
   material_id: number;

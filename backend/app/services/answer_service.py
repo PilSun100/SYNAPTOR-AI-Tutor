@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.models.learning import LearningSession, Question, UserAnswer
+from app.models.learning import LearningSession, Question, User, UserAnswer
 from app.services.adaptive_learning_service import AdaptiveLearningState, build_adaptive_state, update_mastery_from_answer
 from app.services.llm_provider import LLMProvider
 from app.services.retrieval_service import (
@@ -16,10 +16,11 @@ def evaluate_and_store_answer(
     question: Question,
     answer_text: str,
     provider: LLMProvider,
+    user: User,
     session_id: int | None = None,
     response_time: float | None = None,
 ) -> tuple[str, UserAnswer, str, AdaptiveLearningState, list[RetrievedChunk]]:
-    session = _resolve_session(db, question, session_id)
+    session = _resolve_session(db, question, user, session_id)
     evidence_chunks = retrieve_chunks_for_answer(db, question.id, answer_text)
     evaluation = provider.evaluate_answer(
         question_text=question.question_text,
@@ -58,15 +59,16 @@ def evaluate_and_store_answer(
 def _resolve_session(
     db: Session,
     question: Question,
+    user: User,
     session_id: int | None,
 ) -> LearningSession:
     if session_id is not None:
         session = db.get(LearningSession, session_id)
-        if session is not None:
+        if session is not None and session.user_id == user.id:
             return session
 
     material_id = question.concept.material_id
-    session = LearningSession(material_id=material_id)
+    session = LearningSession(material_id=material_id, user_id=user.id)
     db.add(session)
     db.flush()
     return session

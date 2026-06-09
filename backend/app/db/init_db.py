@@ -15,6 +15,7 @@ def init_db() -> None:
 
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_adaptive_columns()
+    _ensure_sqlite_auth_columns()
 
 
 def _ensure_sqlite_adaptive_columns() -> None:
@@ -46,3 +47,29 @@ def _ensure_sqlite_adaptive_columns() -> None:
                 connection.execute(
                     text(f"ALTER TABLE concept_mastery ADD COLUMN {column_name} {definition}")
                 )
+
+
+def _ensure_sqlite_auth_columns() -> None:
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    inspector = inspect(engine)
+    table_columns = {
+        table_name: {column["name"] for column in inspector.get_columns(table_name)}
+        for table_name in inspector.get_table_names()
+    }
+    auth_columns = {
+        "learning_materials": {"user_id": "INTEGER"},
+        "learning_sessions": {"user_id": "INTEGER"},
+        "concept_mastery": {"user_id": "INTEGER"},
+    }
+
+    with engine.begin() as connection:
+        for table_name, columns in auth_columns.items():
+            if table_name not in table_columns:
+                continue
+            for column_name, definition in columns.items():
+                if column_name not in table_columns[table_name]:
+                    connection.execute(
+                        text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
+                    )

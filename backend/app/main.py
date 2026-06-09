@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.answers import router as answers_router
+from app.api.auth import router as auth_router
 from app.api.concepts import router as concepts_router
 from app.api.health import router as health_router
 from app.api.hints import router as hints_router
@@ -26,7 +27,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
-        description="Backend API for the Brain-Sync AI Tutor MVP.",
+        description="Backend API for the Brain-Sync personalized AI learning tutor.",
         lifespan=lifespan,
     )
 
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(answers_router, prefix="/api", tags=["answers"])
+    app.include_router(auth_router, prefix="/api", tags=["auth"])
     app.include_router(concepts_router, prefix="/api", tags=["concepts"])
     app.include_router(health_router, prefix="/api", tags=["health"])
     app.include_router(hints_router, prefix="/api", tags=["hints"])

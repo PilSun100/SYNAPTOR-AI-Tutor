@@ -1,19 +1,50 @@
 import type {
   AnswerEvaluationResponse,
+  AuthResponse,
   ConceptExtractionResponse,
   HintResponse,
   MaterialUploadResponse,
   QuestionGenerationResponse,
   SelfExplanationResponse,
   SessionReportResponse,
+  User,
 } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
+const ACCESS_TOKEN_KEY = 'brain_sync_access_token';
+const REFRESH_TOKEN_KEY = 'brain_sync_refresh_token';
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+export function getStoredAccessToken(): string | null {
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function getStoredRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+export function storeAuthTokens(accessToken: string, refreshToken: string): void {
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+}
+
+export function clearAuthTokens(): void {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, withAuthHeader(init));
   const contentType = response.headers.get('content-type') ?? '';
   const body = contentType.includes('application/json') ? await response.json() : null;
+
+  if (response.status === 401 && retry && getStoredRefreshToken()) {
+    try {
+      await refreshSession();
+      return request<T>(path, init, false);
+    } catch {
+      clearAuthTokens();
+    }
+  }
 
   if (!response.ok) {
     const detail = body?.detail ?? 'API 요청에 실패했습니다.';
@@ -21,6 +52,70 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return body as T;
+}
+
+function withAuthHeader(init: RequestInit): RequestInit {
+  const headers = new Headers(init.headers);
+  const token = getStoredAccessToken();
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  return { ...init, headers };
+}
+
+export async function registerUser(
+  email: string,
+  password: string,
+  displayName: string,
+): Promise<AuthResponse> {
+  const auth = await request<AuthResponse>(
+    '/auth/register',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, display_name: displayName }),
+    },
+    false,
+  );
+  storeAuthTokens(auth.access_token, auth.refresh_token);
+  return auth;
+}
+
+export async function loginUser(email: string, password: string): Promise<AuthResponse> {
+  const auth = await request<AuthResponse>(
+    '/auth/login',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    },
+    false,
+  );
+  storeAuthTokens(auth.access_token, auth.refresh_token);
+  return auth;
+}
+
+export async function refreshSession(): Promise<AuthResponse> {
+  const refreshToken = getStoredRefreshToken();
+  if (!refreshToken) {
+    throw new Error('다시 로그인해야 합니다.');
+  }
+
+  const auth = await request<AuthResponse>(
+    '/auth/refresh',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    },
+    false,
+  );
+  storeAuthTokens(auth.access_token, auth.refresh_token);
+  return auth;
+}
+
+export function getCurrentUser(): Promise<User> {
+  return request<User>('/auth/me');
 }
 
 export async function uploadMaterial(file: File): Promise<MaterialUploadResponse> {

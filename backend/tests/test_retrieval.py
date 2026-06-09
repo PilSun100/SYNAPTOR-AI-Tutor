@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from app.db.session import SessionLocal
 from app.main import create_app
 from app.services.retrieval_service import retrieve_chunks_by_query
+from auth_helpers import auth_headers
 
 
 def make_pdf_bytes(text: str) -> bytes:
@@ -15,6 +16,7 @@ def make_pdf_bytes(text: str) -> bytes:
 
 def test_retrieve_chunks_by_query_returns_relevant_material_chunks() -> None:
     with TestClient(create_app()) as client:
+        headers = auth_headers(client)
         upload_response = client.post(
             "/api/materials/upload",
             files={
@@ -27,6 +29,7 @@ def test_retrieve_chunks_by_query_returns_relevant_material_chunks() -> None:
                     "application/pdf",
                 )
             },
+            headers=headers,
         )
         assert upload_response.status_code == 201
         material_id = upload_response.json()["id"]
