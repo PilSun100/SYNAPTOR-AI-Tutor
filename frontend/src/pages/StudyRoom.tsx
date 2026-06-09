@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   BrainCircuit,
   CheckCircle2,
+  FileText,
   FileUp,
   Gauge,
   HelpCircle,
@@ -24,6 +25,7 @@ import {
 import type {
   AnswerEvaluationResponse,
   Concept,
+  EvidenceSnippet,
   HintResponse,
   MaterialUploadResponse,
   Question,
@@ -55,6 +57,31 @@ const matchesRecommendedType = (questionType: string, recommendedType: string) =
     return normalizedQuestion.includes('definition') || normalizedQuestion.includes('compare');
   }
   return normalizedQuestion.includes(normalizedRecommended);
+};
+
+const EvidenceList = ({ evidence }: { evidence: EvidenceSnippet[] }) => {
+  if (evidence.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="evidence-panel">
+      <div className="evidence-title">
+        <FileText size={16} />
+        <span>PDF 근거</span>
+      </div>
+      <div className="evidence-list">
+        {evidence.map((item) => (
+          <div className="evidence-item" key={`${item.chunk_id}-${item.relevance_score}`}>
+            <span>
+              p.{item.page_number} · relevance {Math.round(item.relevance_score * 100)}%
+            </span>
+            <p>{item.snippet}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export const StudyRoom = () => {
@@ -390,6 +417,9 @@ export const StudyRoom = () => {
                   <p>{answer.missing_points}</p>
                 </div>
               )}
+              <div className="metric-card wide">
+                <EvidenceList evidence={answer.evidence} />
+              </div>
             </div>
           )}
 
@@ -448,6 +478,7 @@ export const StudyRoom = () => {
               <div className="hint-card" key={hint.id}>
                 <span>Level {hint.hint_level}</span>
                 <p>{hint.hint_text}</p>
+                <EvidenceList evidence={hint.evidence} />
               </div>
             ))}
           </div>

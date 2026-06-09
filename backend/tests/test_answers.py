@@ -1,7 +1,9 @@
 import fitz
 from fastapi.testclient import TestClient
 
+from app.db.session import SessionLocal
 from app.main import create_app
+from app.models.learning import EvidenceLog
 
 
 def make_pdf_bytes(text: str) -> bytes:
@@ -63,6 +65,21 @@ def test_submit_answer_evaluates_and_stores_result() -> None:
         assert body["adaptive_state"]["next_difficulty"] in {"easy", "medium", "hard"}
         assert body["adaptive_state"]["next_question_type"]
         assert body["adaptive_state"]["personalized_explanation"]
+        assert body["evidence"]
+        assert body["evidence"][0]["chunk_id"] > 0
+        assert body["evidence"][0]["page_number"] >= 1
+        assert body["evidence"][0]["snippet"]
+
+        with SessionLocal() as db:
+            evidence_count = (
+                db.query(EvidenceLog)
+                .filter(
+                    EvidenceLog.related_answer_id == body["id"],
+                    EvidenceLog.purpose == "answer_evaluation",
+                )
+                .count()
+            )
+            assert evidence_count > 0
 
 
 def test_submit_answer_returns_404_for_missing_question() -> None:

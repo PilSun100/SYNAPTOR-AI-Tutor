@@ -27,6 +27,29 @@ class LearningMaterial(Base):
         back_populates="material",
         cascade="all, delete-orphan",
     )
+    chunks: Mapped[list["MaterialChunk"]] = relationship(
+        back_populates="material",
+        cascade="all, delete-orphan",
+    )
+
+
+class MaterialChunk(Base):
+    __tablename__ = "material_chunks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("learning_materials.id"), nullable=False)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    char_start: Mapped[int] = mapped_column(Integer, nullable=False)
+    char_end: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    material: Mapped[LearningMaterial] = relationship(back_populates="chunks")
+    evidence_logs: Mapped[list["EvidenceLog"]] = relationship(
+        back_populates="chunk",
+        cascade="all, delete-orphan",
+    )
 
 
 class Concept(Base):
@@ -114,6 +137,20 @@ class HintLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
     user_answer: Mapped[UserAnswer] = relationship(back_populates="hints")
+
+
+class EvidenceLog(Base):
+    __tablename__ = "evidence_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    chunk_id: Mapped[int] = mapped_column(ForeignKey("material_chunks.id"), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(100), nullable=False)
+    related_question_id: Mapped[int | None] = mapped_column(ForeignKey("questions.id"), nullable=True)
+    related_answer_id: Mapped[int | None] = mapped_column(ForeignKey("user_answers.id"), nullable=True)
+    relevance_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    chunk: Mapped[MaterialChunk] = relationship(back_populates="evidence_logs")
 
 
 class SelfExplanation(Base):

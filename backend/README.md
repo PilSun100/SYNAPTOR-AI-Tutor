@@ -7,6 +7,11 @@ concept mastery record from answer quality, response time, misconception
 signals, and hint use, then returns a personalized learning state with the
 next difficulty, next question type, learner level, and tailored explanation.
 
+It also includes a RAG-lite foundation. Uploaded PDFs are stored as page-aware
+material chunks, retrieval selects the most relevant chunks for questions,
+answers, hints, and self-explanations, and answer/hint responses return PDF
+evidence snippets.
+
 ## Setup
 
 ```bash

@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app.db.dependencies import get_db
 from app.models.learning import LearningMaterial
 from app.schemas.materials import MaterialUploadResponse
-from app.services.pdf_service import extract_pdf_text, save_upload_file, validate_pdf_upload
+from app.services.material_chunk_service import build_material_chunks
+from app.services.pdf_service import extract_pdf_pages, join_page_texts, save_upload_file, validate_pdf_upload
 
 router = APIRouter()
 
@@ -24,7 +25,8 @@ async def upload_material(
     validate_pdf_upload(file, content)
 
     file_path = save_upload_file(file, content)
-    extracted_text = extract_pdf_text(content)
+    pages = extract_pdf_pages(content)
+    extracted_text = join_page_texts(pages)
     title = Path(file.filename or file_path.name).stem
 
     material = LearningMaterial(
@@ -33,6 +35,8 @@ async def upload_material(
         extracted_text=extracted_text,
     )
     db.add(material)
+    db.flush()
+    db.add_all(build_material_chunks(material.id, pages))
     db.commit()
     db.refresh(material)
 

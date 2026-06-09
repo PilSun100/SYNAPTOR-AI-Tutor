@@ -6,6 +6,7 @@ from app.models.learning import UserAnswer
 from app.schemas.hints import HintRequest, HintResponse
 from app.services.hint_service import generate_and_store_hint
 from app.services.llm_provider import get_llm_provider
+from app.services.retrieval_service import evidence_snippets
 
 router = APIRouter()
 
@@ -30,7 +31,7 @@ def request_hint(
     provider = get_llm_provider()
 
     try:
-        source, hint_log = generate_and_store_hint(
+        source, hint_log, evidence_chunks = generate_and_store_hint(
             db=db,
             user_answer=user_answer,
             hint_level=payload.hint_level,
@@ -47,6 +48,7 @@ def request_hint(
         user_answer_id=hint_log.user_answer_id,
         hint_level=hint_log.hint_level,
         hint_text=hint_log.hint_text,
+        evidence=evidence_snippets(evidence_chunks),
         source=source,
         created_at=hint_log.created_at,
     )

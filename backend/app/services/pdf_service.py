@@ -3,10 +3,16 @@ from uuid import uuid4
 
 import fitz
 from fastapi import HTTPException, UploadFile, status
+from pydantic import BaseModel
 
 from app.core.config import settings
 
 PDF_CONTENT_TYPES = {"application/pdf", "application/x-pdf"}
+
+
+class ExtractedPage(BaseModel):
+    page_number: int
+    text: str
 
 
 def validate_pdf_upload(file: UploadFile, content: bytes) -> None:
@@ -44,7 +50,7 @@ def save_upload_file(file: UploadFile, content: bytes) -> Path:
     return target_path
 
 
-def extract_pdf_text(content: bytes) -> str:
+def extract_pdf_pages(content: bytes) -> list[ExtractedPage]:
     try:
         document = fitz.open(stream=content, filetype="pdf")
     except Exception as exc:
@@ -53,17 +59,24 @@ def extract_pdf_text(content: bytes) -> str:
             detail="PDF 파일을 읽을 수 없습니다.",
         ) from exc
 
-    page_texts: list[str] = []
-    for page in document:
+    pages: list[ExtractedPage] = []
+    for index, page in enumerate(document, start=1):
         text = page.get_text("text").strip()
         if text:
-            page_texts.append(text)
+            pages.append(ExtractedPage(page_number=index, text=text))
 
-    extracted_text = "\n\n".join(page_texts).strip()
-    if not extracted_text:
+    if not pages:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="PDF에서 텍스트를 추출할 수 없습니다.",
         )
 
-    return extracted_text
+    return pages
+
+
+def join_page_texts(pages: list[ExtractedPage]) -> str:
+    return "\n\n".join(page.text for page in pages).strip()
+
+
+def extract_pdf_text(content: bytes) -> str:
+    return join_page_texts(extract_pdf_pages(content))

@@ -52,6 +52,13 @@ export type AdaptiveLearningState = {
   next_review_at: string | null;
 };
 
+export type EvidenceSnippet = {
+  chunk_id: number;
+  page_number: number;
+  snippet: string;
+  relevance_score: number;
+};
+
 export type AnswerEvaluationResponse = {
   id: number;
   session_id: number;
@@ -63,6 +70,7 @@ export type AnswerEvaluationResponse = {
   response_time: number | null;
   feedback: string;
   adaptive_state: AdaptiveLearningState;
+  evidence: EvidenceSnippet[];
   source: string;
   created_at: string;
 };
@@ -72,6 +80,7 @@ export type HintResponse = {
   user_answer_id: number;
   hint_level: number;
   hint_text: string;
+  evidence: EvidenceSnippet[];
   source: string;
   created_at: string;
 };

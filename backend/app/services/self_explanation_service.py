@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.learning import Concept, ConceptMastery, SelfExplanation
 from app.services.adaptive_learning_service import update_mastery_from_self_explanation
 from app.services.llm_provider import LLMProvider
+from app.services.retrieval_service import format_evidence_context, log_evidence, retrieve_chunks_for_concept
 
 
 def evaluate_and_store_self_explanation(
@@ -11,10 +12,12 @@ def evaluate_and_store_self_explanation(
     explanation_text: str,
     provider: LLMProvider,
 ) -> tuple[str, SelfExplanation, ConceptMastery, str]:
+    evidence_chunks = retrieve_chunks_for_concept(db, concept.id)
     evaluation = provider.evaluate_self_explanation(
         concept_title=concept.title,
         concept_description=concept.description,
         explanation_text=explanation_text,
+        evidence_context=format_evidence_context(evidence_chunks),
     )
 
     self_explanation = SelfExplanation(
@@ -26,6 +29,11 @@ def evaluate_and_store_self_explanation(
     )
     db.add(self_explanation)
     db.flush()
+    log_evidence(
+        db,
+        evidence_chunks,
+        purpose="self_explanation_evaluation",
+    )
 
     mastery = update_mastery_from_self_explanation(
         db=db,

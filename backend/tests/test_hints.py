@@ -1,7 +1,9 @@
 import fitz
 from fastapi.testclient import TestClient
 
+from app.db.session import SessionLocal
 from app.main import create_app
+from app.models.learning import EvidenceLog
 
 
 def make_pdf_bytes(text: str) -> bytes:
@@ -59,7 +61,19 @@ def test_request_hint_for_answer() -> None:
         assert body["user_answer_id"] == answer_id
         assert body["hint_level"] == 2
         assert body["hint_text"]
+        assert body["evidence"]
         assert body["source"] in {"heuristic", "gemini"}
+
+        with SessionLocal() as db:
+            evidence_count = (
+                db.query(EvidenceLog)
+                .filter(
+                    EvidenceLog.related_answer_id == answer_id,
+                    EvidenceLog.purpose == "hint_generation",
+                )
+                .count()
+            )
+            assert evidence_count > 0
 
 
 def test_request_hint_returns_404_for_missing_answer() -> None:

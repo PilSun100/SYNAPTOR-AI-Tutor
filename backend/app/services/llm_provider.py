@@ -53,6 +53,7 @@ class LLMProvider(Protocol):
         concept_title: str,
         concept_description: str,
         material_text: str,
+        evidence_context: str = "",
     ) -> list[GeneratedQuestion]:
         pass
 
@@ -61,6 +62,7 @@ class LLMProvider(Protocol):
         question_text: str,
         expected_answer: str,
         answer_text: str,
+        evidence_context: str = "",
     ) -> EvaluatedAnswer:
         pass
 
@@ -71,6 +73,7 @@ class LLMProvider(Protocol):
         answer_text: str,
         missing_points: str,
         hint_level: int,
+        evidence_context: str = "",
     ) -> GeneratedHint:
         pass
 
@@ -79,6 +82,7 @@ class LLMProvider(Protocol):
         concept_title: str,
         concept_description: str,
         explanation_text: str,
+        evidence_context: str = "",
     ) -> EvaluatedSelfExplanation:
         pass
 
@@ -99,13 +103,14 @@ class GeminiProvider:
         concept_title: str,
         concept_description: str,
         material_text: str,
+        evidence_context: str = "",
     ) -> list[GeneratedQuestion]:
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(
-            _build_question_prompt(concept_title, concept_description, material_text)
+            _build_question_prompt(concept_title, concept_description, material_text, evidence_context)
         )
         return _parse_questions(response.text or "")
 
@@ -114,13 +119,14 @@ class GeminiProvider:
         question_text: str,
         expected_answer: str,
         answer_text: str,
+        evidence_context: str = "",
     ) -> EvaluatedAnswer:
         import google.generativeai as genai
 
         genai.configure(api_key=settings.gemini_api_key)
         model = genai.GenerativeModel("gemini-1.5-flash")
         response = model.generate_content(
-            _build_answer_evaluation_prompt(question_text, expected_answer, answer_text)
+            _build_answer_evaluation_prompt(question_text, expected_answer, answer_text, evidence_context)
         )
         return _parse_answer_evaluation(response.text or "")
 
@@ -131,6 +137,7 @@ class GeminiProvider:
         answer_text: str,
         missing_points: str,
         hint_level: int,
+        evidence_context: str = "",
     ) -> GeneratedHint:
         import google.generativeai as genai
 
@@ -143,6 +150,7 @@ class GeminiProvider:
                 answer_text,
                 missing_points,
                 hint_level,
+                evidence_context,
             )
         )
         return GeneratedHint(hint_text=(response.text or "").strip())
@@ -152,6 +160,7 @@ class GeminiProvider:
         concept_title: str,
         concept_description: str,
         explanation_text: str,
+        evidence_context: str = "",
     ) -> EvaluatedSelfExplanation:
         import google.generativeai as genai
 
@@ -162,6 +171,7 @@ class GeminiProvider:
                 concept_title,
                 concept_description,
                 explanation_text,
+                evidence_context,
             )
         )
         return _parse_self_explanation_evaluation(response.text or "")
@@ -201,8 +211,9 @@ class HeuristicProvider:
         concept_title: str,
         concept_description: str,
         material_text: str,
+        evidence_context: str = "",
     ) -> list[GeneratedQuestion]:
-        context = concept_description or material_text[:500]
+        context = _evidence_or_fallback(evidence_context, concept_description or material_text[:500])
         return [
             GeneratedQuestion(
                 question_text=f"{concept_title}의 핵심 의미를 자신의 말로 설명해보세요.",
@@ -226,8 +237,10 @@ class HeuristicProvider:
         question_text: str,
         expected_answer: str,
         answer_text: str,
+        evidence_context: str = "",
     ) -> EvaluatedAnswer:
-        expected_keywords = set(_keywords(expected_answer))
+        evidence_basis = _evidence_or_fallback(evidence_context, expected_answer)
+        expected_keywords = set(_keywords(evidence_basis))
         answer_keywords = set(_keywords(answer_text))
 
         if not expected_keywords:
@@ -259,6 +272,7 @@ class HeuristicProvider:
         answer_text: str,
         missing_points: str,
         hint_level: int,
+        evidence_context: str = "",
     ) -> GeneratedHint:
         missing = missing_points or "질문에서 요구한 핵심 조건"
         templates = {
@@ -275,8 +289,9 @@ class HeuristicProvider:
         concept_title: str,
         concept_description: str,
         explanation_text: str,
+        evidence_context: str = "",
     ) -> EvaluatedSelfExplanation:
-        expected_keywords = set(_keywords(concept_description))
+        expected_keywords = set(_keywords(_evidence_or_fallback(evidence_context, concept_description)))
         explanation_keywords = set(_keywords(explanation_text))
 
         if expected_keywords:
@@ -330,6 +345,7 @@ def _build_question_prompt(
     concept_title: str,
     concept_description: str,
     material_text: str,
+    evidence_context: str = "",
 ) -> str:
     return f"""
 당신은 뇌과학 기반 AI 튜터의 Active Recall 질문 생성 모듈입니다.
@@ -346,6 +362,8 @@ def _build_question_prompt(
 - 정답을 질문 안에 노출하지 마세요.
 - 질문은 한국어로 작성하세요.
 - 개념 이해, 적용, 오개념 탐지를 섞으세요.
+- 아래 제공된 근거 chunk만 사용하세요.
+- 근거 chunk로 확인할 수 없는 사실은 만들지 마세요.
 
 개념명:
 {concept_title}
@@ -355,6 +373,9 @@ def _build_question_prompt(
 
 학습 자료 일부:
 {material_text[:8000]}
+
+근거 chunk:
+{evidence_context[:8000] or "근거 chunk가 없습니다."}
 """.strip()
 
 
@@ -362,6 +383,7 @@ def _build_answer_evaluation_prompt(
     question_text: str,
     expected_answer: str,
     answer_text: str,
+    evidence_context: str = "",
 ) -> str:
     return f"""
 당신은 뇌과학 기반 AI 튜터의 답변 평가 모듈입니다.
@@ -374,11 +396,20 @@ def _build_answer_evaluation_prompt(
 - misconception_detected: 오개념이 있으면 true, 아니면 false
 - feedback: 다음 사고를 유도하는 짧은 피드백. 정답 직접 공개 금지
 
+엄격한 근거 규칙:
+- 반드시 제공된 근거 chunk만 사용하세요.
+- 근거 chunk에 없는 내용을 발명하거나 일반 지식으로 보강하지 마세요.
+- 정답 전체를 공개하지 말고 능동 회상을 유도하세요.
+- missing_points와 misconception_detected는 근거 chunk와 사용자 답변의 차이로만 판단하세요.
+
 질문:
 {question_text}
 
 평가 기준:
 {expected_answer}
+
+근거 chunk:
+{evidence_context[:8000] or "근거 chunk가 없습니다."}
 
 사용자 답변:
 {answer_text}
@@ -391,6 +422,7 @@ def _build_hint_prompt(
     answer_text: str,
     missing_points: str,
     hint_level: int,
+    evidence_context: str = "",
 ) -> str:
     return f"""
 당신은 뇌과학 기반 AI 튜터의 Adaptive Scaffolding 모듈입니다.
@@ -408,12 +440,16 @@ def _build_hint_prompt(
 - 답을 설명하지 말고 다음 사고 행동을 유도하세요.
 - 한국어 한두 문장으로 작성하세요.
 - 현재 레벨보다 더 강한 힌트를 제공하지 마세요.
+- 제공된 근거 chunk만 사용하고, 근거 밖의 정보를 만들지 마세요.
 
 질문:
 {question_text}
 
 평가 기준:
 {expected_answer}
+
+근거 chunk:
+{evidence_context[:8000] or "근거 chunk가 없습니다."}
 
 사용자 답변:
 {answer_text}
@@ -430,6 +466,7 @@ def _build_self_explanation_prompt(
     concept_title: str,
     concept_description: str,
     explanation_text: str,
+    evidence_context: str = "",
 ) -> str:
     return f"""
 당신은 뇌과학 기반 AI 튜터의 Self-Explanation 평가 모듈입니다.
@@ -442,11 +479,19 @@ def _build_self_explanation_prompt(
 - logical_connection_score: 0.0부터 1.0 사이의 숫자
 - feedback: 보완할 사고 방향을 짧게 제시. 정답 전체 공개 금지
 
+근거 규칙:
+- 제공된 근거 chunk만 사용하세요.
+- 근거 chunk에 없는 내용을 평가 기준으로 삼지 마세요.
+- 사용자가 스스로 다시 설명하도록 유도하세요.
+
 개념명:
 {concept_title}
 
 개념 설명:
 {concept_description}
+
+근거 chunk:
+{evidence_context[:8000] or "근거 chunk가 없습니다."}
 
 사용자 자기 설명:
 {explanation_text}
@@ -646,6 +691,13 @@ def _keywords(text: str) -> list[str]:
         "있습니다",
     }
     return [word for word in words if word not in stopwords]
+
+
+def _evidence_or_fallback(evidence_context: str, fallback: str) -> str:
+    cleaned = evidence_context.strip()
+    if cleaned and cleaned != "제공된 근거 chunk가 없습니다.":
+        return cleaned
+    return fallback
 
 
 def _score(value: object) -> float:
