@@ -21,6 +21,16 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Database
+
+Production-oriented development uses PostgreSQL with Alembic migrations.
+
+```bash
+alembic upgrade head
+```
+
+For fast local tests, SQLite can still be used with `AUTO_CREATE_TABLES=true`.
+
 ## Run
 
 ```bash
@@ -46,5 +56,5 @@ Answer, self-explanation, and report responses include `adaptive_state` or
 ## Test
 
 ```bash
-pytest
+python -m pytest tests
 ```

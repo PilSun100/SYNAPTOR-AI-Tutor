@@ -10,6 +10,9 @@ from app.models import learning
 
 def init_db() -> None:
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
+    if not settings.auto_create_tables:
+        return
+
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_adaptive_columns()
 

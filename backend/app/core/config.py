@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     upload_dir: str = str(PROJECT_ROOT / "data" / "uploads")
     max_upload_mb: int = 20
     cors_origins: str = "http://localhost:5173"
+    jwt_secret_key: str = "change-this-development-secret"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 14
+    auto_create_tables: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -231,7 +231,7 @@ Brain-Sync-AI-Tutor/
 
 ## 실행 방법
 
-백엔드와 프론트엔드를 각각 실행합니다. 프론트엔드는 `VITE_API_BASE_URL`로 백엔드 API 주소를 바라봅니다.
+서비스형 개발 환경은 Docker Compose 기반 PostgreSQL을 기본으로 사용합니다. 빠른 테스트는 SQLite fallback으로도 실행할 수 있지만, 실제 서비스 개발 기준은 PostgreSQL입니다.
 
 ### Environment
 
@@ -239,7 +239,25 @@ Brain-Sync-AI-Tutor/
 cp .env.example .env
 ```
 
-Gemini API 키가 없으면 로컬 fallback 로직으로 동작합니다.
+Gemini API 키가 없으면 로컬 fallback 로직으로 동작하지만, 실제 서비스 품질 검증은 API 키를 설정한 상태에서 진행합니다.
+
+### Docker Compose
+
+```bash
+docker compose up --build
+```
+
+초기 DB migration:
+
+```bash
+docker compose exec backend alembic upgrade head
+```
+
+접속 주소:
+
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000/api`
+- API Docs: `http://localhost:8000/docs`
 
 ### Frontend
 
@@ -258,6 +276,7 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
@@ -296,5 +315,5 @@ npm run build
 - Gemini 응답이 항상 원하는 JSON 형식으로 오지 않을 수 있습니다.
 - PDF 품질에 따라 텍스트 추출 정확도가 달라질 수 있습니다.
 - 정답을 바로 알려주지 않는 힌트는 프롬프트 제어가 중요합니다.
-- PostgreSQL과 vector DB를 너무 빨리 도입하면 MVP 범위가 커질 수 있습니다.
-- 과제 제출용으로는 기능을 작게 나누어 Git history를 남기는 것이 중요합니다.
+- PostgreSQL/pgvector 운영 환경에서는 migration, backup, access control을 함께 관리해야 합니다.
+- 실제 서비스 기준으로 기능을 작게 나누어 브랜치와 커밋 히스토리를 남기는 것이 중요합니다.
