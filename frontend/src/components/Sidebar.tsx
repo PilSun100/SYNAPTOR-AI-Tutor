@@ -1,8 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { BrainCircuit, BookOpen, Settings, User } from 'lucide-react';
+import { BrainCircuit, BookOpen, LogOut, User } from 'lucide-react';
+import { useAuth } from '../auth/useAuth';
 import './Sidebar.css';
 
 export const Sidebar = () => {
+  const { logout, user } = useAuth();
+
   return (
     <aside className="sidebar glass-panel">
       <div className="sidebar-header">
@@ -24,9 +27,15 @@ export const Sidebar = () => {
         </NavLink>
       </nav>
       <div className="sidebar-footer">
-        <button className="nav-item">
-          <Settings size={20} />
-          <span>Settings</span>
+        {user && (
+          <div className="sidebar-user">
+            <span>{user.display_name}</span>
+            <small>{user.email}</small>
+          </div>
+        )}
+        <button className="nav-item" onClick={logout}>
+          <LogOut size={20} />
+          <span>Logout</span>
         </button>
       </div>
     </aside>

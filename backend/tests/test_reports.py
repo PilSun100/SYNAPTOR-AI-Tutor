@@ -2,6 +2,7 @@ import fitz
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from auth_helpers import auth_headers
 
 
 def make_pdf_bytes(text: str) -> bytes:
@@ -11,7 +12,7 @@ def make_pdf_bytes(text: str) -> bytes:
     return document.tobytes()
 
 
-def create_learning_flow(client: TestClient) -> tuple[int, int, int]:
+def create_learning_flow(client: TestClient, headers: dict[str, str]) -> tuple[int, int, int]:
     upload_response = client.post(
         "/api/materials/upload",
         files={
@@ -25,15 +26,16 @@ def create_learning_flow(client: TestClient) -> tuple[int, int, int]:
                 "application/pdf",
             )
         },
+        headers=headers,
     )
     assert upload_response.status_code == 201
 
     material_id = upload_response.json()["id"]
-    concept_response = client.post(f"/api/materials/{material_id}/concepts/extract")
+    concept_response = client.post(f"/api/materials/{material_id}/concepts/extract", headers=headers)
     assert concept_response.status_code == 201
     concept_id = concept_response.json()["concepts"][0]["id"]
 
-    question_response = client.post(f"/api/concepts/{concept_id}/questions/generate")
+    question_response = client.post(f"/api/concepts/{concept_id}/questions/generate", headers=headers)
     assert question_response.status_code == 201
     question_id = question_response.json()["questions"][0]["id"]
 
@@ -43,6 +45,7 @@ def create_learning_flow(client: TestClient) -> tuple[int, int, int]:
             "answer_text": "Active recall retrieves information before seeing the answer.",
             "response_time": 9.0,
         },
+        headers=headers,
     )
     assert answer_response.status_code == 201
     session_id = answer_response.json()["session_id"]
@@ -51,6 +54,7 @@ def create_learning_flow(client: TestClient) -> tuple[int, int, int]:
     hint_response = client.post(
         f"/api/answers/{answer_id}/hint",
         json={"hint_level": 1},
+        headers=headers,
     )
     assert hint_response.status_code == 201
 
@@ -62,6 +66,7 @@ def create_learning_flow(client: TestClient) -> tuple[int, int, int]:
                 "and then connect the result with my own explanation."
             )
         },
+        headers=headers,
     )
     assert self_explanation_response.status_code == 201
 
@@ -70,9 +75,10 @@ def create_learning_flow(client: TestClient) -> tuple[int, int, int]:
 
 def test_get_session_report_returns_learning_summary() -> None:
     with TestClient(create_app()) as client:
-        session_id, material_id, concept_id = create_learning_flow(client)
+        headers = auth_headers(client)
+        session_id, material_id, concept_id = create_learning_flow(client, headers)
 
-        response = client.get(f"/api/sessions/{session_id}/report")
+        response = client.get(f"/api/sessions/{session_id}/report", headers=headers)
 
         body = response.json()
         assert response.status_code == 200
@@ -92,7 +98,8 @@ def test_get_session_report_returns_learning_summary() -> None:
 
 def test_get_session_report_returns_404_for_missing_session() -> None:
     with TestClient(create_app()) as client:
-        response = client.get("/api/sessions/999999/report")
+        headers = auth_headers(client)
+        response = client.get("/api/sessions/999999/report", headers=headers)
 
         assert response.status_code == 404
         assert response.json()["detail"] == "학습 세션을 찾을 수 없습니다."

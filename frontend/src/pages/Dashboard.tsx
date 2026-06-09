@@ -1,14 +1,17 @@
 import { Link } from 'react-router-dom';
 import { PlayCircle, Activity, Award, BrainCircuit } from 'lucide-react';
+import { useAuth } from '../auth/useAuth';
 import './Dashboard.css';
 
 export const Dashboard = () => {
+  const { user } = useAuth();
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
         <div>
-          <h1>Welcome back, <span className="text-gradient">Seeker</span></h1>
-          <p className="subtitle">Ready to synchronize your brain today?</p>
+          <h1>Welcome back, <span className="text-gradient">{user?.display_name ?? 'Learner'}</span></h1>
+          <p className="subtitle">오늘의 자료 기반 회상 훈련을 시작하세요.</p>
         </div>
         <Link className="glow-btn dashboard-start-link" to="/study">
           <PlayCircle size={20} />

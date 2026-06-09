@@ -2,6 +2,7 @@ import fitz
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from auth_helpers import auth_headers
 
 
 def make_pdf_bytes(text: str) -> bytes:
@@ -11,7 +12,7 @@ def make_pdf_bytes(text: str) -> bytes:
     return document.tobytes()
 
 
-def create_concept(client: TestClient) -> int:
+def create_concept(client: TestClient, headers: dict[str, str]) -> int:
     upload_response = client.post(
         "/api/materials/upload",
         files={
@@ -24,20 +25,22 @@ def create_concept(client: TestClient) -> int:
                 "application/pdf",
             )
         },
+        headers=headers,
     )
     assert upload_response.status_code == 201
 
     material_id = upload_response.json()["id"]
-    concept_response = client.post(f"/api/materials/{material_id}/concepts/extract")
+    concept_response = client.post(f"/api/materials/{material_id}/concepts/extract", headers=headers)
     assert concept_response.status_code == 201
     return int(concept_response.json()["concepts"][0]["id"])
 
 
 def test_generate_questions_for_concept() -> None:
     with TestClient(create_app()) as client:
-        concept_id = create_concept(client)
+        headers = auth_headers(client)
+        concept_id = create_concept(client, headers)
 
-        response = client.post(f"/api/concepts/{concept_id}/questions/generate")
+        response = client.post(f"/api/concepts/{concept_id}/questions/generate", headers=headers)
 
         body = response.json()
         assert response.status_code == 201
@@ -52,7 +55,8 @@ def test_generate_questions_for_concept() -> None:
 
 def test_generate_questions_returns_404_for_missing_concept() -> None:
     with TestClient(create_app()) as client:
-        response = client.post("/api/concepts/999999/questions/generate")
+        headers = auth_headers(client)
+        response = client.post("/api/concepts/999999/questions/generate", headers=headers)
 
         assert response.status_code == 404
         assert response.json()["detail"] == "개념을 찾을 수 없습니다."
