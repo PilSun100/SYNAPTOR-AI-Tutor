@@ -5,14 +5,21 @@ from sqlalchemy.orm import Session
 
 from app.models.learning import Concept, EvidenceLog, LearningMaterial, MaterialChunk, Question
 from app.schemas.evidence import EvidenceSnippetResponse
+from app.services.embedding_service import cosine_similarity, embed_material_chunks, embed_query
 from app.services.material_chunk_service import build_material_chunks
 from app.services.pdf_service import ExtractedPage
+
+LEXICAL_WEIGHT = 0.45
+SEMANTIC_WEIGHT = 0.55
+MIN_RELEVANCE_SCORE = 0.015
 
 
 @dataclass(frozen=True)
 class RetrievedChunk:
     chunk: MaterialChunk
     relevance_score: float
+    lexical_score: float = 0.0
+    semantic_score: float = 0.0
 
 
 def retrieve_chunks_for_concept(
@@ -69,13 +76,14 @@ def retrieve_chunks_by_query(
         return []
 
     chunks = _material_chunks(db, material)
+    query_embedding = embed_query(query) if any(chunk.embedding for chunk in chunks) else None
     scored = [
-        RetrievedChunk(chunk=chunk, relevance_score=_score_chunk(query, chunk.content))
+        _score_retrieved_chunk(query, query_embedding, chunk)
         for chunk in chunks
     ]
     scored.sort(key=lambda item: (item.relevance_score, -item.chunk.chunk_index), reverse=True)
 
-    positive = [item for item in scored if item.relevance_score > 0]
+    positive = [item for item in scored if item.relevance_score >= MIN_RELEVANCE_SCORE]
     return positive[:top_k]
 
 
@@ -102,7 +110,7 @@ def evidence_snippets(chunks: list[RetrievedChunk]) -> list[EvidenceSnippetRespo
             relevance_score=round(item.relevance_score, 3),
         )
         for item in chunks
-        if item.relevance_score > 0
+        if item.relevance_score >= MIN_RELEVANCE_SCORE
     ]
 
 
@@ -122,7 +130,7 @@ def log_evidence(
             relevance_score=item.relevance_score,
         )
         for item in chunks
-        if item.chunk.id is not None and item.relevance_score > 0
+        if item.chunk.id is not None and item.relevance_score >= MIN_RELEVANCE_SCORE
     )
 
 
@@ -138,9 +146,30 @@ def _material_chunks(db: Session, material: LearningMaterial) -> list[MaterialCh
 
     fallback_pages = [ExtractedPage(page_number=1, text=material.extracted_text)]
     fallback_chunks = build_material_chunks(material.id, fallback_pages)
+    embed_material_chunks(fallback_chunks)
     db.add_all(fallback_chunks)
     db.flush()
     return fallback_chunks
+
+
+def _score_retrieved_chunk(
+    query: str,
+    query_embedding: list[float] | None,
+    chunk: MaterialChunk,
+) -> RetrievedChunk:
+    lexical_score = _score_chunk(query, chunk.content)
+    semantic_score = cosine_similarity(query_embedding, chunk.embedding)
+    if query_embedding and chunk.embedding:
+        relevance_score = (lexical_score * LEXICAL_WEIGHT) + (semantic_score * SEMANTIC_WEIGHT)
+    else:
+        relevance_score = lexical_score
+
+    return RetrievedChunk(
+        chunk=chunk,
+        relevance_score=round(relevance_score, 4),
+        lexical_score=round(lexical_score, 4),
+        semantic_score=round(semantic_score, 4),
+    )
 
 
 def _score_chunk(query: str, content: str) -> float:

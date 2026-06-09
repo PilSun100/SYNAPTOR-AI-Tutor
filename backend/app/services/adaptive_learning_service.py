@@ -26,6 +26,8 @@ def update_mastery_from_answer(
 ) -> ConceptMastery:
     concept = answer.question.concept
     mastery = get_or_create_mastery(db, concept)
+    if mastery.user_id is None:
+        mastery.user_id = answer.session.user_id
     answer_quality = _clamp(answer.correctness_score)
     speed_score = _response_speed_score(answer.response_time)
     misconception_penalty = 0.18 if answer.misconception_detected else 0.0
@@ -68,8 +70,11 @@ def update_mastery_from_self_explanation(
     db: Session,
     concept: Concept,
     score: float,
+    user_id: int | None = None,
 ) -> ConceptMastery:
     mastery = get_or_create_mastery(db, concept)
+    if mastery.user_id is None:
+        mastery.user_id = user_id
     previous_attempts = mastery.total_attempts
     mastery.total_attempts += 1
     if score >= 0.7:

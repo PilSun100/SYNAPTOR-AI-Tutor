@@ -11,6 +11,7 @@ def evaluate_and_store_self_explanation(
     concept: Concept,
     explanation_text: str,
     provider: LLMProvider,
+    user_id: int | None = None,
 ) -> tuple[str, SelfExplanation, ConceptMastery, str]:
     evidence_chunks = retrieve_chunks_for_concept(db, concept.id)
     evaluation = provider.evaluate_self_explanation(
@@ -44,6 +45,7 @@ def evaluate_and_store_self_explanation(
             + evaluation.logical_connection_score
         )
         / 3,
+        user_id=user_id,
     )
     db.commit()
     db.refresh(self_explanation)
