@@ -16,6 +16,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _ensure_sqlite_adaptive_columns()
     _ensure_sqlite_auth_columns()
+    _ensure_sqlite_embedding_columns()
 
 
 def _ensure_sqlite_adaptive_columns() -> None:
@@ -73,3 +74,25 @@ def _ensure_sqlite_auth_columns() -> None:
                     connection.execute(
                         text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
                     )
+
+
+def _ensure_sqlite_embedding_columns() -> None:
+    if not settings.database_url.startswith("sqlite"):
+        return
+
+    inspector = inspect(engine)
+    if "material_chunks" not in inspector.get_table_names():
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("material_chunks")}
+    embedding_columns = {
+        "embedding": "TEXT",
+        "embedding_model": "VARCHAR(100)",
+    }
+
+    with engine.begin() as connection:
+        for column_name, definition in embedding_columns.items():
+            if column_name not in existing_columns:
+                connection.execute(
+                    text(f"ALTER TABLE material_chunks ADD COLUMN {column_name} {definition}")
+                )
