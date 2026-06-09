@@ -38,3 +38,27 @@ def test_retrieve_chunks_by_query_returns_relevant_material_chunks() -> None:
         assert chunks[0].chunk.page_number == 1
         assert chunks[0].relevance_score > 0
         assert "Active recall" in chunks[0].chunk.content
+
+
+def test_retrieve_chunks_by_query_returns_empty_when_no_evidence_matches() -> None:
+    with TestClient(create_app()) as client:
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={
+                "file": (
+                    "retrieval-empty.pdf",
+                    make_pdf_bytes(
+                        "Active recall improves long-term memory by forcing learners "
+                        "to retrieve information before checking the material."
+                    ),
+                    "application/pdf",
+                )
+            },
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+
+    with SessionLocal() as db:
+        chunks = retrieve_chunks_by_query(db, material_id, "photosynthesis chlorophyll")
+
+        assert chunks == []

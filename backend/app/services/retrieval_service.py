@@ -76,7 +76,7 @@ def retrieve_chunks_by_query(
     scored.sort(key=lambda item: (item.relevance_score, -item.chunk.chunk_index), reverse=True)
 
     positive = [item for item in scored if item.relevance_score > 0]
-    return (positive or scored)[:top_k]
+    return positive[:top_k]
 
 
 def format_evidence_context(chunks: list[RetrievedChunk]) -> str:
@@ -102,6 +102,7 @@ def evidence_snippets(chunks: list[RetrievedChunk]) -> list[EvidenceSnippetRespo
             relevance_score=round(item.relevance_score, 3),
         )
         for item in chunks
+        if item.relevance_score > 0
     ]
 
 
@@ -121,7 +122,7 @@ def log_evidence(
             relevance_score=item.relevance_score,
         )
         for item in chunks
-        if item.chunk.id is not None
+        if item.chunk.id is not None and item.relevance_score > 0
     )
 
 
