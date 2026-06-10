@@ -214,6 +214,10 @@ class User(Base):
     materials: Mapped[list[LearningMaterial]] = relationship(back_populates="user")
     sessions: Mapped[list[LearningSession]] = relationship(back_populates="user")
     mastery_records: Mapped[list[ConceptMastery]] = relationship(back_populates="user")
+    learning_profile: Mapped["UserLearningProfile | None"] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
@@ -231,3 +235,21 @@ class RefreshToken(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
     user: Mapped[User] = relationship(back_populates="refresh_tokens")
+
+
+class UserLearningProfile(Base):
+    __tablename__ = "user_learning_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, unique=True)
+    average_recall_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    explanation_quality: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    hint_dependency: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    misconception_frequency: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    preferred_difficulty_level: Mapped[str] = mapped_column(String(50), nullable=False, default="easy")
+    frustration_risk: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    best_intervention_type: Mapped[str] = mapped_column(String(100), nullable=False, default="active_recall")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    user: Mapped[User] = relationship(back_populates="learning_profile")

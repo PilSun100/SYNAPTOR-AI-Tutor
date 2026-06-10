@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models.learning import Concept, ConceptMastery, SelfExplanation
 from app.services.adaptive_learning_service import update_mastery_from_self_explanation
+from app.services.learning_profile_service import update_learning_profile
 from app.services.llm_provider import LLMProvider
 from app.services.retrieval_service import format_evidence_context, log_evidence, retrieve_chunks_for_concept
 
@@ -47,6 +48,7 @@ def evaluate_and_store_self_explanation(
         / 3,
         user_id=user_id,
     )
+    update_learning_profile(db, user_id)
     db.commit()
     db.refresh(self_explanation)
     db.refresh(mastery)

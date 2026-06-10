@@ -20,6 +20,10 @@ This branch adds production-oriented authentication. Users register or log in
 with email/password, receive JWT access tokens and refresh tokens, and learning
 materials, sessions, and mastery records are scoped to the authenticated user.
 
+It also stores a user learning profile. The profile aggregates recall score,
+self-explanation quality, hint dependency, misconception frequency, frustration
+risk, weak concepts, and the recommended next learning method.
+
 ## Setup
 
 ```bash
@@ -56,6 +60,7 @@ API docs are available at `http://localhost:8000/docs`.
 - `POST /api/auth/login`
 - `POST /api/auth/refresh`
 - `GET /api/auth/me`
+- `GET /api/profile/learning`
 - `POST /api/materials/upload`
 - `POST /api/materials/{material_id}/concepts/extract`
 - `POST /api/concepts/{concept_id}/questions/generate`

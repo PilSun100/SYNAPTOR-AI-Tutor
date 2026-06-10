@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.learning import LearningSession, Question, User, UserAnswer
 from app.services.adaptive_learning_service import AdaptiveLearningState, build_adaptive_state, update_mastery_from_answer
 from app.services.llm_provider import LLMProvider
+from app.services.learning_profile_service import update_learning_profile
 from app.services.retrieval_service import (
     RetrievedChunk,
     format_evidence_context,
@@ -50,6 +51,7 @@ def evaluate_and_store_answer(
     )
     mastery = update_mastery_from_answer(db, user_answer)
     adaptive_state = build_adaptive_state(question.concept, mastery)
+    update_learning_profile(db, user.id)
     db.commit()
     db.refresh(user_answer)
 

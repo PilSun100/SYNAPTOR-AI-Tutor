@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.models.learning import HintLog, UserAnswer
 from app.services.adaptive_learning_service import register_hint_use
+from app.services.learning_profile_service import update_learning_profile
 from app.services.llm_provider import LLMProvider
 from app.services.retrieval_service import (
     RetrievedChunk,
@@ -53,6 +54,7 @@ def generate_and_store_hint(
         related_answer_id=user_answer.id,
     )
     register_hint_use(db, user_answer)
+    update_learning_profile(db, user_answer.session.user_id)
     db.commit()
     db.refresh(hint_log)
 
