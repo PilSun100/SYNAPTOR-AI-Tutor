@@ -186,7 +186,7 @@ class HeuristicProvider:
 
         for chunk in chunks[:8]:
             title = _make_title(chunk)
-            difficulty = "hard" if len(chunk) > 260 else "medium" if len(chunk) > 140 else "easy"
+            difficulty = _heuristic_difficulty(chunk)
             concepts.append(
                 ExtractedConcept(
                     title=title,
@@ -328,6 +328,12 @@ def _build_concept_prompt(text: str) -> str:
     return f"""
 당신은 뇌과학 기반 AI 튜터의 개념 구조화 모듈입니다.
 아래 학습 자료를 Cognitive Chunking 관점에서 분석해 핵심 개념을 5~8개 추출하세요.
+
+선별 기준:
+- 시험이나 학습에서 설명/비교/적용할 수 있는 실질 개념만 추출하세요.
+- 강의 제목, 과목명, 학기, 연도, 페이지 번호, 목차, 발표용 장식 문구는 제외하세요.
+- "Introduction to ...", "1st semester", "Mobile System Engineering"처럼 문서 메타데이터에 가까운 항목은 개념으로 만들지 마세요.
+- 슬라이드 제목이라도 실제 학습 개념이면 구체적인 개념명으로 정리하세요. 예: "TD exploits Markov property" -> "TD와 Markov property"
 
 반드시 JSON 배열만 반환하세요. Markdown 코드블록은 쓰지 마세요.
 각 항목은 다음 필드를 가져야 합니다.
@@ -519,7 +525,7 @@ def _parse_concepts(raw_text: str) -> list[ExtractedConcept]:
         difficulty = str(item.get("difficulty", "medium")).strip().lower()
         parent_title = item.get("parent_title")
 
-        if not title or not description:
+        if not title or not description or _is_non_learning_title(title):
             continue
 
         if difficulty not in {"easy", "medium", "hard"}:
@@ -662,16 +668,153 @@ def _extract_object_json(raw_text: str) -> str:
 
 
 def _candidate_chunks(text: str) -> list[str]:
-    compact = re.sub(r"\s+", " ", text).strip()
-    parts = re.split(r"(?<=[.!?。！？])\s+|\n+", compact)
-    return [part.strip() for part in parts if len(part.strip()) >= 24]
+    lines = [_clean_learning_line(line) for line in text.splitlines()]
+    meaningful_lines = [line for line in lines if _is_learning_line(line)]
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    for index, line in enumerate(meaningful_lines):
+        if not _is_candidate_concept_line(line):
+            continue
+
+        details = []
+        for next_line in meaningful_lines[index + 1 : index + 4]:
+            if _is_candidate_concept_line(next_line):
+                break
+            if _line_score(next_line) > 0:
+                details.append(next_line)
+
+        chunk = " ".join([line, *details]).strip()
+        normalized = _normalize_title(chunk)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        candidates.append(chunk)
+
+    if not candidates:
+        compact = " ".join(meaningful_lines)
+        parts = re.split(r"(?<=[.!?。！？])\s+", compact)
+        candidates = [part.strip() for part in parts if _is_learning_line(part)]
+
+    return sorted(candidates, key=_candidate_score, reverse=True)[:12]
 
 
 def _make_title(chunk: str) -> str:
-    words = re.findall(r"[A-Za-z0-9가-힣_-]+", chunk)
+    words = re.findall(r"[A-Za-z0-9가-힣λΛ()_-]+", chunk)
     if not words:
         return "핵심 개념"
-    return " ".join(words[:5])[:80]
+    title = " ".join(words[:6])
+    title = re.sub(r"\bMobile System Engineering\b", "", title, flags=re.IGNORECASE).strip()
+    return title[:80] or "핵심 개념"
+
+
+def _heuristic_difficulty(chunk: str) -> str:
+    score = _line_score(chunk)
+    if score >= 9:
+        return "hard"
+    if score >= 6:
+        return "medium"
+    return "easy"
+
+
+def _clean_learning_line(line: str) -> str:
+    cleaned = re.sub(r"^[•\-–—·\s]+", "", line.strip())
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip()
+
+
+def _is_learning_line(line: str) -> bool:
+    if len(line) < 3:
+        return False
+    if re.fullmatch(r"\d{1,3}", line):
+        return False
+    if _is_non_learning_title(line):
+        return False
+    return True
+
+
+def _is_candidate_concept_line(line: str) -> bool:
+    if len(line) < 6:
+        return False
+    if _line_score(line) <= 0:
+        return False
+    if line.endswith(":") and len(line.split()) <= 2:
+        return False
+    return True
+
+
+def _is_non_learning_title(title: str) -> bool:
+    normalized = _normalize_title(title)
+    if not normalized:
+        return True
+
+    metadata_patterns = [
+        r"^introduction to .*\b20\d{2}\b$",
+        r"^introduction to reinforcement learning$",
+        r"^\d+(st|nd|rd|th)? semester\b",
+        r"^mobile system engineering$",
+        r"^engineering question$",
+        r"^\d+\s+mobile system engineering\b",
+        r"^td\s+\d+\s+mobile system engineering\b",
+    ]
+    if any(re.search(pattern, normalized) for pattern in metadata_patterns):
+        return True
+
+    metadata_terms = {"semester", "engineering", "introduction", "question"}
+    words = set(re.findall(r"[a-z]+", normalized))
+    return bool(words) and words <= metadata_terms
+
+
+def _candidate_score(text: str) -> int:
+    return _line_score(text) * 10 + min(len(_keywords(text)), 12)
+
+
+def _line_score(text: str) -> int:
+    normalized = _normalize_title(text)
+    score = 0
+    technical_patterns = {
+        "reinforcement": 1,
+        "random walk": 3,
+        "monte": 3,
+        "mc": 2,
+        "temporal": 3,
+        "difference": 2,
+        "td": 2,
+        "markov": 3,
+        "batch": 2,
+        "certainty": 3,
+        "equivalence": 3,
+        "backup": 3,
+        "bootstrapping": 3,
+        "sampling": 2,
+        "dynamic programming": 3,
+        "n-step": 3,
+        "return": 2,
+        "lambda": 3,
+        "λ": 3,
+        "forward": 2,
+        "backward": 2,
+        "prediction": 2,
+        "value": 2,
+    }
+    for pattern, weight in technical_patterns.items():
+        if pattern in normalized:
+            score += weight
+
+    metadata_penalties = ["semester", "mobile system engineering", "introduction to", "question"]
+    for pattern in metadata_penalties:
+        if pattern in normalized:
+            score -= 3
+
+    return score
+
+
+def _normalize_title(text: str) -> str:
+    normalized = text.lower()
+    normalized = normalized.replace("λ", "lambda")
+    normalized = re.sub(r"[^a-z0-9가-힣()_\-\s]+", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized
 
 
 def _keywords(text: str) -> list[str]:

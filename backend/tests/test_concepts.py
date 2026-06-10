@@ -2,6 +2,7 @@ import fitz
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.services.llm_provider import HeuristicProvider
 from auth_helpers import auth_headers
 
 
@@ -53,3 +54,36 @@ def test_extract_concepts_returns_404_for_missing_material() -> None:
 
         assert response.status_code == 404
         assert response.json()["detail"] == "학습 자료를 찾을 수 없습니다."
+
+
+def test_heuristic_concept_extraction_filters_slide_metadata() -> None:
+    text = """
+    Introduction to Reinforcement Learning
+    2026. 1st semester
+    Mobile System Engineering
+    Random Walk Example
+    2
+    Mobile System Engineering
+    Random Walk: MC vs. TD
+    4
+    Mobile System Engineering
+    Advantages and Disadvantages of MC vs. TD (3)
+    • TD exploits Markov property
+    • MC does not exploit Markov property
+    Certainty Equivalence
+    • In Batch MC
+    • In Batch TD(0)
+    Forward-view TD(λ)
+    Backward View TD(λ)
+    """
+
+    concepts = HeuristicProvider().extract_concepts(text)
+    titles = [concept.title for concept in concepts]
+    joined_titles = " ".join(titles).lower()
+
+    assert concepts
+    assert "introduction to reinforcement learning" not in joined_titles
+    assert "mobile system engineering" not in joined_titles
+    assert "semester" not in joined_titles
+    assert any("Random Walk" in title or "TD" in title for title in titles)
+    assert all(concept.difficulty in {"easy", "medium", "hard"} for concept in concepts)
