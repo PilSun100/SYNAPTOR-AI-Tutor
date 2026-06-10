@@ -28,6 +28,10 @@ Daily review recommendations are available for spaced reinforcement. The API
 prioritizes concepts by due review time, forgetting risk, misconceptions, weak
 mastery, and hint dependency.
 
+The dashboard summary API combines the learning profile, daily review queue,
+misconception notes, review schedule, and recent sessions for the personalized
+dashboard.
+
 ## Setup
 
 ```bash
@@ -66,6 +70,7 @@ API docs are available at `http://localhost:8000/docs`.
 - `GET /api/auth/me`
 - `GET /api/profile/learning`
 - `GET /api/reviews/daily`
+- `GET /api/dashboard/summary`
 - `POST /api/materials/upload`
 - `POST /api/materials/{material_id}/concepts/extract`
 - `POST /api/concepts/{concept_id}/questions/generate`

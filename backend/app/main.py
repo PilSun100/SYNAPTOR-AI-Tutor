@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.answers import router as answers_router
 from app.api.auth import router as auth_router
 from app.api.concepts import router as concepts_router
+from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
 from app.api.hints import router as hints_router
 from app.api.materials import router as materials_router
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(answers_router, prefix="/api", tags=["answers"])
     app.include_router(auth_router, prefix="/api", tags=["auth"])
     app.include_router(concepts_router, prefix="/api", tags=["concepts"])
+    app.include_router(dashboard_router, prefix="/api", tags=["dashboard"])
     app.include_router(health_router, prefix="/api", tags=["health"])
     app.include_router(hints_router, prefix="/api", tags=["hints"])
     app.include_router(materials_router, prefix="/api", tags=["materials"])

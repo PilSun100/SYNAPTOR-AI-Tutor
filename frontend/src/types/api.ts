@@ -67,6 +67,53 @@ export type DailyReviewResponse = {
   generated_at: string;
 };
 
+export type MemorySummary = {
+  total_materials: number;
+  total_concepts: number;
+  average_mastery: number;
+  due_today_count: number;
+  high_priority_count: number;
+  weak_concept_count: number;
+};
+
+export type MisconceptionNote = {
+  concept_id: number;
+  concept_title: string;
+  misconception_count: number;
+  hint_dependency: number;
+  reason: string;
+};
+
+export type ReviewScheduleItem = {
+  concept_id: number;
+  concept_title: string;
+  next_review_at: string | null;
+  priority: string;
+  recommended_method: string;
+  reason: string;
+};
+
+export type RecentSession = {
+  session_id: number;
+  material_id: number;
+  material_title: string;
+  started_at: string;
+  ended_at: string | null;
+  total_answers: number;
+  average_score: number;
+  misconception_count: number;
+};
+
+export type DashboardSummaryResponse = {
+  profile: LearningProfileResponse;
+  daily_review: DailyReviewResponse;
+  memory_summary: MemorySummary;
+  misconception_notes: MisconceptionNote[];
+  review_schedule: ReviewScheduleItem[];
+  recent_sessions: RecentSession[];
+  generated_at: string;
+};
+
 export type Concept = {
   id: number;
   material_id: number;

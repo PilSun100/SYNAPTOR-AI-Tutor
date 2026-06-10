@@ -3,6 +3,7 @@ import type {
   AuthResponse,
   ConceptExtractionResponse,
   DailyReviewResponse,
+  DashboardSummaryResponse,
   HintResponse,
   LearningProfileResponse,
   MaterialUploadResponse,
@@ -126,6 +127,10 @@ export function getLearningProfile(): Promise<LearningProfileResponse> {
 
 export function getDailyReview(): Promise<DailyReviewResponse> {
   return request<DailyReviewResponse>('/reviews/daily');
+}
+
+export function getDashboardSummary(): Promise<DashboardSummaryResponse> {
+  return request<DashboardSummaryResponse>('/dashboard/summary');
 }
 
 export async function uploadMaterial(file: File): Promise<MaterialUploadResponse> {
