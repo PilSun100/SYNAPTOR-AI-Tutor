@@ -22,6 +22,33 @@ export type AuthResponse = {
   user: User;
 };
 
+export type WeakConcept = {
+  concept_id: number;
+  title: string;
+  mastery_level: number;
+  misconception_count: number;
+  hint_dependency: number;
+  next_review_at: string | null;
+  reason: string;
+};
+
+export type LearningProfileResponse = {
+  user_id: number;
+  average_recall_score: number;
+  explanation_quality: number;
+  hint_dependency: number;
+  misconception_frequency: number;
+  preferred_difficulty_level: string;
+  frustration_risk: number;
+  best_intervention_type: string;
+  recommendation_reason: string;
+  next_action: string;
+  total_answers: number;
+  total_self_explanations: number;
+  weak_concepts: WeakConcept[];
+  updated_at: string;
+};
+
 export type Concept = {
   id: number;
   material_id: number;

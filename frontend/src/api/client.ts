@@ -3,6 +3,7 @@ import type {
   AuthResponse,
   ConceptExtractionResponse,
   HintResponse,
+  LearningProfileResponse,
   MaterialUploadResponse,
   QuestionGenerationResponse,
   SelfExplanationResponse,
@@ -116,6 +117,10 @@ export async function refreshSession(): Promise<AuthResponse> {
 
 export function getCurrentUser(): Promise<User> {
   return request<User>('/auth/me');
+}
+
+export function getLearningProfile(): Promise<LearningProfileResponse> {
+  return request<LearningProfileResponse>('/profile/learning');
 }
 
 export async function uploadMaterial(file: File): Promise<MaterialUploadResponse> {
