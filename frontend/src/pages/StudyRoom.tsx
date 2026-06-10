@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   BrainCircuit,
+  CalendarClock,
   CheckCircle2,
   FileText,
   FileUp,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import {
   extractConcepts,
+  getDashboardSummary,
   generateQuestions,
   getSessionReport,
   requestHint,
@@ -25,6 +27,7 @@ import {
 import type {
   AnswerEvaluationResponse,
   Concept,
+  DashboardSummaryResponse,
   EvidenceSnippet,
   HintResponse,
   MaterialUploadResponse,
@@ -42,6 +45,24 @@ const questionTypeLabels: Record<string, string> = {
   example: '예시 생성형',
   application: '적용형',
   misconception_check: '오개념 점검형',
+};
+
+const methodLabels: Record<string, string> = {
+  active_recall: 'Active Recall',
+  feynman_check: 'Feynman Check',
+  misconception_repair: 'Misconception Repair',
+  example_first: 'Example First',
+  hint_ladder: 'Hint Ladder',
+  spaced_review: 'Spaced Review',
+  mixed_practice: 'Mixed Practice',
+};
+
+const hintLevelLabels: Record<number, string> = {
+  1: '방향만 제시',
+  2: '관련 개념 연결',
+  3: '답변 구조 잡기',
+  4: '강한 발판 제공',
+  5: '정답 직전 설명',
 };
 
 const normalizeQuestionType = (type: string) => type.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
@@ -85,6 +106,7 @@ const EvidenceList = ({ evidence }: { evidence: EvidenceSnippet[] }) => {
 };
 
 export const StudyRoom = () => {
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummaryResponse | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [material, setMaterial] = useState<MaterialUploadResponse | null>(null);
   const [concepts, setConcepts] = useState<Concept[]>([]);
@@ -105,6 +127,19 @@ export const StudyRoom = () => {
   const canRequestHint = Boolean(answer && hints.length < 5);
   const currentHintLevel = hints.length + 1;
   const adaptiveState = selfExplanation?.adaptive_state ?? answer?.adaptive_state ?? report?.adaptive_summary[0] ?? null;
+  const learningMode = answer?.misconception_detected
+    ? 'misconception_repair'
+    : adaptiveState?.next_question_type === 'example'
+      ? 'example_first'
+      : dashboardSummary?.profile.best_intervention_type ?? 'active_recall';
+  const recommendedDifficulty = adaptiveState?.next_difficulty ?? dashboardSummary?.profile.preferred_difficulty_level ?? 'diagnostic';
+  const topReview = dashboardSummary?.daily_review.review_items[0] ?? null;
+  const coachReason = adaptiveState?.personalized_explanation
+    ?? dashboardSummary?.profile.recommendation_reason
+    ?? '첫 답변을 제출하면 Brain-Sync가 현재 수준과 다음 학습 방식을 계산합니다.';
+  const nextAction = adaptiveState?.recommended_strategy
+    ?? dashboardSummary?.profile.next_action
+    ?? '자료를 업로드하고 기억에서 직접 답을 꺼내보세요.';
 
   const steps = useMemo(
     () => [
@@ -130,6 +165,19 @@ export const StudyRoom = () => {
       setLoadingLabel('');
     }
   };
+
+  const refreshDashboardSummary = async () => {
+    try {
+      const response = await getDashboardSummary();
+      setDashboardSummary(response);
+    } catch {
+      // Study flow should remain usable even when the dashboard summary is temporarily unavailable.
+    }
+  };
+
+  useEffect(() => {
+    void refreshDashboardSummary();
+  }, []);
 
   const handleUpload = () =>
     runAction('자료 업로드 중', async () => {
@@ -201,6 +249,7 @@ export const StudyRoom = () => {
       setSessionId(evaluated.session_id);
       setHints([]);
       setReport(null);
+      void refreshDashboardSummary();
     });
 
   const handleRequestHint = () =>
@@ -211,6 +260,7 @@ export const StudyRoom = () => {
 
       const hint = await requestHint(answer.id, currentHintLevel);
       setHints((current) => [...current, hint]);
+      void refreshDashboardSummary();
     });
 
   const handleSubmitSelfExplanation = () =>
@@ -224,6 +274,7 @@ export const StudyRoom = () => {
 
       const evaluated = await submitSelfExplanation(selectedConcept.id, selfExplanationText);
       setSelfExplanation(evaluated);
+      void refreshDashboardSummary();
 
       if (sessionId) {
         const sessionReport = await getSessionReport(sessionId);
@@ -288,6 +339,33 @@ export const StudyRoom = () => {
             <span>{step.label}</span>
           </div>
         ))}
+      </section>
+
+      <section className="personalization-strip glass-panel">
+        <div className="personalization-card primary">
+          <BrainCircuit size={20} />
+          <div>
+            <span>현재 학습 모드</span>
+            <strong>{methodLabels[learningMode] ?? learningMode}</strong>
+            <p>{coachReason}</p>
+          </div>
+        </div>
+        <div className="personalization-card">
+          <Gauge size={20} />
+          <div>
+            <span>권장 난이도</span>
+            <strong>{recommendedDifficulty}</strong>
+            <p>{nextAction}</p>
+          </div>
+        </div>
+        <div className="personalization-card">
+          <CalendarClock size={20} />
+          <div>
+            <span>오늘 복습 포커스</span>
+            <strong>{topReview?.concept_title ?? '복습 대기 없음'}</strong>
+            <p>{topReview?.reason ?? '새 답변이 쌓이면 망각 위험 기반 복습이 생성됩니다.'}</p>
+          </div>
+        </div>
       </section>
 
       {error && (
@@ -377,7 +455,11 @@ export const StudyRoom = () => {
           {activeQuestion && (
             <>
               <div className="question-box">
-                <span>{activeQuestion.question_type}</span>
+                <div className="question-meta-row">
+                  <span>{questionTypeLabels[activeQuestion.question_type] ?? activeQuestion.question_type}</span>
+                  <span>{selectedConcept?.difficulty ?? recommendedDifficulty}</span>
+                  <span>{methodLabels[learningMode] ?? learningMode}</span>
+                </div>
                 <p>{activeQuestion.question_text}</p>
               </div>
               <textarea
@@ -417,6 +499,10 @@ export const StudyRoom = () => {
                   <p>{answer.missing_points}</p>
                 </div>
               )}
+              <div className="metric-card wide">
+                <span>개인화 다음 행동</span>
+                <p>{nextAction}</p>
+              </div>
               <div className="metric-card wide">
                 <EvidenceList evidence={answer.evidence} />
               </div>
@@ -472,6 +558,17 @@ export const StudyRoom = () => {
             <HelpCircle size={18} />
             Level {Math.min(currentHintLevel, 5)} 힌트
           </button>
+          <div className="hint-ladder">
+            {[1, 2, 3, 4, 5].map((level) => (
+              <div
+                className={`hint-step ${hints.length >= level ? 'done' : currentHintLevel === level && answer ? 'current' : ''}`}
+                key={level}
+              >
+                <span>Hint {level}</span>
+                <strong>{hintLevelLabels[level]}</strong>
+              </div>
+            ))}
+          </div>
           <div className="hint-list">
             {hints.length === 0 && <p className="muted">답변 평가 후 단계별 힌트를 요청하세요.</p>}
             {hints.map((hint) => (

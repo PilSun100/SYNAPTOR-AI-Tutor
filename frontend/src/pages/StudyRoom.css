@@ -57,6 +57,55 @@
   background: rgba(20, 184, 166, 0.18);
 }
 
+.personalization-strip {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.personalization-card {
+  min-height: 128px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.personalization-card.primary {
+  border-color: rgba(20, 184, 166, 0.34);
+  background: rgba(20, 184, 166, 0.08);
+}
+
+.personalization-card svg {
+  color: var(--accent);
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.personalization-card span {
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.personalization-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.personalization-card p {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .error-banner {
   border: 1px solid rgba(251, 191, 36, 0.35);
   border-radius: 8px;
@@ -232,6 +281,22 @@
   background: rgba(99, 102, 241, 0.08);
 }
 
+.question-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.question-meta-row span {
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #dbeafe;
+  background: rgba(99, 102, 241, 0.14);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .question-box span,
 .hint-card span,
 .review-item span,
@@ -240,6 +305,11 @@
 .report-metrics span {
   color: var(--text-secondary);
   font-size: 0.82rem;
+}
+
+.question-box .question-meta-row span {
+  color: #dbeafe;
+  font-size: 0.76rem;
 }
 
 .question-box p {
@@ -287,6 +357,45 @@
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   padding: 12px;
+}
+
+.hint-ladder {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.hint-step {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hint-step span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.hint-step strong {
+  font-size: 0.88rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.hint-step.current {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.hint-step.done {
+  border-color: rgba(20, 184, 166, 0.32);
+  background: rgba(20, 184, 166, 0.08);
 }
 
 .metric-card strong {
@@ -444,6 +553,7 @@
   }
 
   .study-grid,
+  .personalization-strip,
   .evaluation-grid,
   .compact-grid,
   .adaptive-metrics,
