@@ -95,7 +95,8 @@ def format_evidence_context(chunks: list[RetrievedChunk]) -> str:
     for item in chunks:
         chunk = item.chunk
         lines.append(
-            f"[chunk_id={chunk.id}, page={chunk.page_number}, score={item.relevance_score:.2f}]\n"
+            f"[chunk_id={chunk.id}, page={chunk.page_number}, type={chunk.chunk_type}, "
+            f"score={item.relevance_score:.2f}]\n"
             f"{chunk.content[:1200]}"
         )
     return "\n\n".join(lines)
@@ -106,6 +107,7 @@ def evidence_snippets(chunks: list[RetrievedChunk]) -> list[EvidenceSnippetRespo
         EvidenceSnippetResponse(
             chunk_id=item.chunk.id,
             page_number=item.chunk.page_number,
+            chunk_type=item.chunk.chunk_type,
             snippet=_snippet(item.chunk.content),
             relevance_score=round(item.relevance_score, 3),
         )

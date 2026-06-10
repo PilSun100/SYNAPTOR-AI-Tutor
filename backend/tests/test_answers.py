@@ -73,6 +73,7 @@ def test_submit_answer_evaluates_and_stores_result() -> None:
         assert body["evidence"]
         assert body["evidence"][0]["chunk_id"] > 0
         assert body["evidence"][0]["page_number"] >= 1
+        assert body["evidence"][0]["chunk_type"] == "text"
         assert body["evidence"][0]["snippet"]
 
         with SessionLocal() as db:

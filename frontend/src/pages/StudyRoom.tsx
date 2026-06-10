@@ -65,6 +65,11 @@ const hintLevelLabels: Record<number, string> = {
   5: '정답 직전 설명',
 };
 
+const chunkTypeLabels: Record<string, string> = {
+  text: '텍스트 근거',
+  image_description: '이미지/도표 근거',
+};
+
 const normalizeQuestionType = (type: string) => type.toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
 
 const matchesRecommendedType = (questionType: string, recommendedType: string) => {
@@ -95,7 +100,8 @@ const EvidenceList = ({ evidence }: { evidence: EvidenceSnippet[] }) => {
         {evidence.map((item) => (
           <div className="evidence-item" key={`${item.chunk_id}-${item.relevance_score}`}>
             <span>
-              p.{item.page_number} · relevance {Math.round(item.relevance_score * 100)}%
+              p.{item.page_number} · {chunkTypeLabels[item.chunk_type] ?? item.chunk_type} · relevance{' '}
+              {Math.round(item.relevance_score * 100)}%
             </span>
             <p>{item.snippet}</p>
           </div>

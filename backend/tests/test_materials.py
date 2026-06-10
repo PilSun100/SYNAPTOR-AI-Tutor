@@ -42,6 +42,7 @@ def test_upload_material_extracts_text_and_stores_metadata() -> None:
             assert chunks
             assert chunks[0].page_number == 1
             assert chunks[0].chunk_index == 0
+            assert chunks[0].chunk_type == "text"
             assert chunks[0].char_start >= 0
             assert chunks[0].char_end > chunks[0].char_start
 

@@ -162,6 +162,7 @@ export type AdaptiveLearningState = {
 export type EvidenceSnippet = {
   chunk_id: number;
   page_number: number;
+  chunk_type: string;
   snippet: string;
   relevance_score: number;
 };

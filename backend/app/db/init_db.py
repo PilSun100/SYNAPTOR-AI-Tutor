@@ -86,6 +86,7 @@ def _ensure_sqlite_embedding_columns() -> None:
 
     existing_columns = {column["name"] for column in inspector.get_columns("material_chunks")}
     embedding_columns = {
+        "chunk_type": "VARCHAR(50) NOT NULL DEFAULT 'text'",
         "embedding": "TEXT",
         "embedding_model": "VARCHAR(100)",
     }

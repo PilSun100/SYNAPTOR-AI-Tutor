@@ -43,6 +43,7 @@ class MaterialChunk(Base):
     material_id: Mapped[int] = mapped_column(ForeignKey("learning_materials.id"), nullable=False)
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunk_type: Mapped[str] = mapped_column(String(50), nullable=False, default="text")
     content: Mapped[str] = mapped_column(Text, nullable=False)
     char_start: Mapped[int] = mapped_column(Integer, nullable=False)
     char_end: Mapped[int] = mapped_column(Integer, nullable=False)
