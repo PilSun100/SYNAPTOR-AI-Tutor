@@ -136,12 +136,12 @@ export function TutorChat() {
     <div className="tutor-chat-page">
       <header className="tutor-chat-header">
         <div>
-          <h1>RAG Tutor Chat</h1>
+          <h1>근거 기반 튜터 채팅</h1>
           <p className="subtitle">업로드한 자료의 텍스트와 이미지/도표 근거를 바탕으로 질문하고 학습 방향을 조정합니다.</p>
         </div>
         <Link className="glow-btn" to="/study">
           <BookOpen size={20} />
-          Study Room
+          학습실
         </Link>
       </header>
 
@@ -164,7 +164,7 @@ export function TutorChat() {
             <div className="chat-empty-material">
               <MessageSquareText size={34} />
               <strong>채팅할 자료가 없습니다.</strong>
-              <p>Study Room에서 PDF를 먼저 업로드하면 이곳에서 자료 기반 채팅을 시작할 수 있습니다.</p>
+              <p>학습실에서 PDF를 먼저 업로드하면 이곳에서 자료 기반 채팅을 시작할 수 있습니다.</p>
               <Link className="chat-secondary-link" to="/study">자료 업로드하기</Link>
             </div>
           )}
@@ -196,7 +196,7 @@ export function TutorChat() {
             </div>
             <div className="chat-mode-pill">
               <Sparkles size={16} />
-              Evidence-grounded
+              자료 근거 기반
             </div>
           </div>
 
