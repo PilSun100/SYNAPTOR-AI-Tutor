@@ -59,12 +59,12 @@ export function DailyReview() {
     <div className="daily-review-page">
       <header className="daily-review-header">
         <div>
-          <h1>Today’s Brain-Sync Review</h1>
+          <h1>오늘의 복습 큐</h1>
           <p className="subtitle">망각 위험, 오개념, 힌트 의존도를 바탕으로 오늘 복습할 개념을 고릅니다.</p>
         </div>
         <Link className="glow-btn review-start-link" to="/study">
           <PlayCircle size={20} />
-          Study Room
+          학습실
         </Link>
       </header>
 
@@ -99,7 +99,7 @@ export function DailyReview() {
           <div className="glass-panel review-empty">
             <BrainCircuit size={46} className="text-gradient" style={{ opacity: 0.55 }} />
             <strong>오늘 우선 복습할 취약 개념이 없습니다.</strong>
-            <p>새 자료를 학습하거나 Study Room에서 능동 회상 질문을 풀면 복습 일정이 생성됩니다.</p>
+            <p>새 자료를 학습하거나 학습실에서 능동 회상 질문을 풀면 복습 일정이 생성됩니다.</p>
           </div>
         )}
         {review?.review_items.map((item) => (

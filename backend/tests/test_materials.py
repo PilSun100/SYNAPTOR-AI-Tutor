@@ -58,3 +58,24 @@ def test_upload_material_rejects_non_pdf_file() -> None:
 
         assert response.status_code == 400
         assert response.json()["detail"] == "PDF 파일만 업로드할 수 있습니다."
+
+
+def test_list_materials_returns_current_user_uploads() -> None:
+    pdf_bytes = make_pdf_bytes("Spaced repetition schedules review before forgetting.")
+
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("review.pdf", pdf_bytes, "application/pdf")},
+            headers=headers,
+        )
+        assert upload_response.status_code == 201
+
+        response = client.get("/api/materials", headers=headers)
+
+        body = response.json()
+        assert response.status_code == 200
+        assert len(body["materials"]) >= 1
+        assert body["materials"][0]["title"] == "review"
+        assert "Spaced repetition" in body["materials"][0]["preview"]

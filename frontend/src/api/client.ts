@@ -6,10 +6,12 @@ import type {
   DashboardSummaryResponse,
   HintResponse,
   LearningProfileResponse,
+  MaterialListResponse,
   MaterialUploadResponse,
   QuestionGenerationResponse,
   SelfExplanationResponse,
   SessionReportResponse,
+  TutorChatResponse,
   User,
 } from '../types/api';
 
@@ -133,6 +135,10 @@ export function getDashboardSummary(): Promise<DashboardSummaryResponse> {
   return request<DashboardSummaryResponse>('/dashboard/summary');
 }
 
+export function getMaterials(): Promise<MaterialListResponse> {
+  return request<MaterialListResponse>('/materials');
+}
+
 export async function uploadMaterial(file: File): Promise<MaterialUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
@@ -193,4 +199,12 @@ export function submitSelfExplanation(
 
 export function getSessionReport(sessionId: number): Promise<SessionReportResponse> {
   return request<SessionReportResponse>(`/sessions/${sessionId}/report`);
+}
+
+export function sendTutorChatMessage(materialId: number, message: string): Promise<TutorChatResponse> {
+  return request<TutorChatResponse>(`/materials/${materialId}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
 }

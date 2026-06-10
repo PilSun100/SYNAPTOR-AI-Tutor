@@ -16,6 +16,7 @@ from app.api.questions import router as questions_router
 from app.api.reports import router as reports_router
 from app.api.reviews import router as reviews_router
 from app.api.self_explanations import router as self_explanations_router
+from app.api.tutor_chat import router as tutor_chat_router
 from app.core.config import settings
 from app.db.init_db import init_db
 
@@ -55,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(questions_router, prefix="/api", tags=["questions"])
     app.include_router(reports_router, prefix="/api", tags=["reports"])
     app.include_router(reviews_router, prefix="/api", tags=["reviews"])
+    app.include_router(tutor_chat_router, prefix="/api", tags=["tutor-chat"])
     app.include_router(
         self_explanations_router,
         prefix="/api",

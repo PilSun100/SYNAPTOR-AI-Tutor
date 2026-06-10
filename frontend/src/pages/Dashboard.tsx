@@ -84,17 +84,17 @@ export const Dashboard = () => {
     <div className="dashboard">
       <header className="dashboard-header">
         <div>
-          <h1>Welcome back, <span className="text-gradient">{user?.display_name ?? 'Learner'}</span></h1>
+          <h1>오늘의 학습 경로, <span className="text-gradient">{user?.display_name ?? 'Learner'}</span></h1>
           <p className="subtitle">Brain-Sync가 회상 점수, 오개념, 망각 위험을 합쳐 오늘의 학습 경로를 계산합니다.</p>
         </div>
         <div className="dashboard-actions">
           <Link className="ghost-link" to="/review">
             <CalendarClock size={18} />
-            Daily Review
+            오늘 복습
           </Link>
           <Link className="glow-btn dashboard-start-link" to="/study">
             <PlayCircle size={20} />
-            Start Session
+            학습 시작
           </Link>
         </div>
       </header>
@@ -110,7 +110,7 @@ export const Dashboard = () => {
         <div className="section-heading">
           <BrainCircuit size={22} />
           <div>
-            <h2>Today’s Brain-Sync</h2>
+            <h2>오늘의 추천 학습</h2>
             <p>{loading ? '개인화 학습 경로를 계산하는 중입니다.' : profile?.recommendation_reason}</p>
           </div>
         </div>
@@ -134,7 +134,7 @@ export const Dashboard = () => {
             <Target size={24} />
           </div>
           <div className="stat-info">
-            <h3>Recall Score</h3>
+            <h3>회상 점수</h3>
             <p className="glow-text">{profile ? formatPercent(profile.average_recall_score) : '--'}</p>
             <span>답변 기반 회상 정확도</span>
           </div>
@@ -144,7 +144,7 @@ export const Dashboard = () => {
             <Lightbulb size={24} />
           </div>
           <div className="stat-info">
-            <h3>Self Explanation</h3>
+            <h3>자기 설명</h3>
             <p className="glow-text">{profile ? formatPercent(profile.explanation_quality) : '--'}</p>
             <span>자기 설명 품질</span>
           </div>
@@ -154,7 +154,7 @@ export const Dashboard = () => {
             <Gauge size={24} />
           </div>
           <div className="stat-info">
-            <h3>Memory Strength</h3>
+            <h3>기억 강도</h3>
             <p className="glow-text">{memory ? formatPercent(memory.average_mastery) : '--'}</p>
             <span>{memory?.total_concepts ?? 0}개 개념 추적 중</span>
           </div>
@@ -164,7 +164,7 @@ export const Dashboard = () => {
             <ShieldAlert size={24} />
           </div>
           <div className="stat-info">
-            <h3>High Risk</h3>
+            <h3>고위험 개념</h3>
             <p className="glow-text">{memory?.high_priority_count ?? '--'}</p>
             <span>오늘 우선순위 높음</span>
           </div>
@@ -176,7 +176,7 @@ export const Dashboard = () => {
           <div className="section-heading compact">
             <RefreshCcw size={20} />
             <div>
-              <h2>Weak Concepts</h2>
+              <h2>취약 개념</h2>
               <p>숙련도, 힌트 의존도, 오개념 기록을 함께 봅니다.</p>
             </div>
           </div>
@@ -184,7 +184,7 @@ export const Dashboard = () => {
             {profile?.weak_concepts.length === 0 && (
               <div className="empty-state">
                 <BrainCircuit size={40} className="text-gradient" style={{ opacity: 0.5 }} />
-                <p>아직 취약 개념 데이터가 없습니다. Study Room에서 첫 세션을 시작하세요.</p>
+                <p>아직 취약 개념 데이터가 없습니다. 학습실에서 첫 세션을 시작하세요.</p>
               </div>
             )}
             {profile?.weak_concepts.map((concept) => (
@@ -203,7 +203,7 @@ export const Dashboard = () => {
           <div className="section-heading compact">
             <Gauge size={20} />
             <div>
-              <h2>Your Learning Profile</h2>
+              <h2>학습 프로필</h2>
               <p>개인화 엔진이 다음 난이도와 학습 방식을 고릅니다.</p>
             </div>
           </div>
@@ -233,7 +233,7 @@ export const Dashboard = () => {
           <div className="section-heading compact">
             <ShieldAlert size={20} />
             <div>
-              <h2>Misconception Notes</h2>
+              <h2>오개념 노트</h2>
               <p>정답처럼 보이지만 근거와 어긋난 개념을 우선 교정합니다.</p>
             </div>
           </div>

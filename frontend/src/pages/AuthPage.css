@@ -26,8 +26,8 @@
 .auth-product-panel h1 {
   max-width: 720px;
   margin-bottom: 16px;
-  font-size: clamp(2.2rem, 5vw, 4.8rem);
-  line-height: 1.05;
+  font-size: 3.4rem;
+  line-height: 1.08;
 }
 
 .auth-product-panel p {
@@ -171,5 +171,9 @@
 
   .auth-feature-grid {
     grid-template-columns: 1fr;
+  }
+
+  .auth-product-panel h1 {
+    font-size: 2.4rem;
   }
 }

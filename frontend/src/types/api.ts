@@ -7,6 +7,18 @@ export type MaterialUploadResponse = {
   created_at: string;
 };
 
+export type MaterialSummary = {
+  id: number;
+  title: string;
+  extracted_text_length: number;
+  preview: string;
+  created_at: string;
+};
+
+export type MaterialListResponse = {
+  materials: MaterialSummary[];
+};
+
 export type User = {
   id: number;
   email: string;
@@ -165,6 +177,16 @@ export type EvidenceSnippet = {
   chunk_type: string;
   snippet: string;
   relevance_score: number;
+};
+
+export type TutorChatResponse = {
+  material_id: number;
+  reply: string;
+  learning_mode: string;
+  next_action: string;
+  suggested_questions: string[];
+  evidence: EvidenceSnippet[];
+  source: string;
 };
 
 export type AnswerEvaluationResponse = {

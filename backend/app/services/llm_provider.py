@@ -42,6 +42,14 @@ class EvaluatedSelfExplanation:
     feedback: str
 
 
+@dataclass(frozen=True)
+class GeneratedTutorChat:
+    reply: str
+    learning_mode: str
+    next_action: str
+    suggested_questions: list[str]
+
+
 class LLMProvider(Protocol):
     source: str
 
@@ -84,6 +92,13 @@ class LLMProvider(Protocol):
         explanation_text: str,
         evidence_context: str = "",
     ) -> EvaluatedSelfExplanation:
+        pass
+
+    def generate_tutor_chat(
+        self,
+        user_message: str,
+        evidence_context: str,
+    ) -> GeneratedTutorChat:
         pass
 
 
@@ -175,6 +190,18 @@ class GeminiProvider:
             )
         )
         return _parse_self_explanation_evaluation(response.text or "")
+
+    def generate_tutor_chat(
+        self,
+        user_message: str,
+        evidence_context: str,
+    ) -> GeneratedTutorChat:
+        import google.generativeai as genai
+
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(_build_tutor_chat_prompt(user_message, evidence_context))
+        return _parse_tutor_chat(response.text or "")
 
 
 class HeuristicProvider:
@@ -315,6 +342,46 @@ class HeuristicProvider:
             completeness_score=round(completeness, 2),
             logical_connection_score=round(logical_connection, 2),
             feedback=feedback,
+        )
+
+    def generate_tutor_chat(
+        self,
+        user_message: str,
+        evidence_context: str,
+    ) -> GeneratedTutorChat:
+        evidence_basis = _evidence_or_fallback(evidence_context, "")
+        evidence_keywords = _keywords(evidence_basis)
+        user_keywords = set(_keywords(user_message))
+        overlap = [keyword for keyword in evidence_keywords if keyword in user_keywords][:5]
+
+        if not evidence_basis:
+            return GeneratedTutorChat(
+                reply=(
+                    "업로드 자료에서 이 질문을 뒷받침할 근거를 충분히 찾지 못했습니다. "
+                    "자료 안의 개념명이나 페이지에 나온 키워드로 다시 질문해보세요."
+                ),
+                learning_mode="evidence_check",
+                next_action="질문에 포함할 핵심 용어를 하나 더 구체화해보세요.",
+                suggested_questions=[
+                    "이 자료에서 가장 중요한 개념은 무엇인가요?",
+                    "방금 질문과 관련된 페이지 근거를 찾아줄 수 있나요?",
+                ],
+            )
+
+        focus = ", ".join(overlap) if overlap else "검색된 근거"
+        return GeneratedTutorChat(
+            reply=(
+                f"자료 근거 기준으로 보면, 지금 질문은 {focus}와 연결됩니다. "
+                "바로 정답을 외우기보다 먼저 그 개념이 어떤 문제를 해결하려는지 한 문장으로 말해보세요. "
+                "그다음 근거 문장에서 반복되는 조건, 관계, 결과를 분리하면 이해가 더 안정됩니다."
+            ),
+            learning_mode="active_recall",
+            next_action="근거를 보지 않고 핵심 관계를 한 문장으로 먼저 설명해보세요.",
+            suggested_questions=[
+                "이 개념을 기억에서 꺼내 한 문장으로 설명해보세요.",
+                "자료 근거에서 원인과 결과 관계를 나눠 설명해보세요.",
+                "이 개념을 헷갈리기 쉬운 개념과 비교해보세요.",
+            ],
         )
 
 
@@ -504,6 +571,33 @@ def _build_self_explanation_prompt(
 """.strip()
 
 
+def _build_tutor_chat_prompt(user_message: str, evidence_context: str) -> str:
+    return f"""
+당신은 Brain-Sync의 뇌과학 기반 개인화 AI 튜터입니다.
+사용자 질문에 답하되, 일반 챗봇처럼 장황하게 설명하지 말고 업로드 자료 근거를 바탕으로 학습 행동을 설계하세요.
+
+반드시 JSON 객체만 반환하세요. Markdown 코드블록은 쓰지 마세요.
+필드는 다음과 같습니다.
+- reply: 사용자에게 보여줄 답변. 자료 근거를 요약하되 정답을 모두 공개하기보다 능동 회상을 유도
+- learning_mode: active_recall, feynman_check, misconception_repair, evidence_check, example_first 중 하나
+- next_action: 사용자가 바로 할 다음 학습 행동 한 문장
+- suggested_questions: 사용자가 이어서 물어보거나 답해볼 질문 2~3개 배열
+
+엄격한 근거 규칙:
+- 제공된 근거 chunk만 사용하세요.
+- 근거 chunk에 없는 내용은 "자료에서 확인되지 않습니다"라고 말하세요.
+- 이미지/도표 근거 chunk가 있으면 그것이 시각 자료 설명임을 반영하세요.
+- 사용자가 정답을 요구해도 가능한 한 먼저 생각할 단서와 구조를 제공하세요.
+- 단, 사용자가 개념 설명을 요구하면 근거 범위 안에서 간결하게 설명하세요.
+
+사용자 질문:
+{user_message}
+
+근거 chunk:
+{evidence_context[:10000] or "근거 chunk가 없습니다."}
+""".strip()
+
+
 def _parse_concepts(raw_text: str) -> list[ExtractedConcept]:
     json_text = _extract_json(raw_text)
 
@@ -636,6 +730,44 @@ def _parse_self_explanation_evaluation(raw_text: str) -> EvaluatedSelfExplanatio
         completeness_score=_score(data.get("completeness_score", 0)),
         logical_connection_score=_score(data.get("logical_connection_score", 0)),
         feedback=str(data.get("feedback", "")).strip(),
+    )
+
+
+def _parse_tutor_chat(raw_text: str) -> GeneratedTutorChat:
+    json_text = _extract_object_json(raw_text)
+
+    try:
+        data = json.loads(json_text)
+    except json.JSONDecodeError as exc:
+        raise ValueError("LLM 응답을 JSON으로 해석할 수 없습니다.") from exc
+
+    if not isinstance(data, dict):
+        raise ValueError("LLM 응답은 JSON 객체여야 합니다.")
+
+    allowed_modes = {
+        "active_recall",
+        "feynman_check",
+        "misconception_repair",
+        "evidence_check",
+        "example_first",
+    }
+    learning_mode = str(data.get("learning_mode", "active_recall")).strip()
+    if learning_mode not in allowed_modes:
+        learning_mode = "active_recall"
+
+    suggested_questions = data.get("suggested_questions", [])
+    if not isinstance(suggested_questions, list):
+        suggested_questions = []
+
+    return GeneratedTutorChat(
+        reply=str(data.get("reply", "")).strip() or "자료 근거를 바탕으로 다시 질문을 구체화해보세요.",
+        learning_mode=learning_mode,
+        next_action=str(data.get("next_action", "")).strip() or "핵심 개념을 한 문장으로 먼저 떠올려보세요.",
+        suggested_questions=[
+            str(question).strip()
+            for question in suggested_questions[:3]
+            if str(question).strip()
+        ],
     )
 
 

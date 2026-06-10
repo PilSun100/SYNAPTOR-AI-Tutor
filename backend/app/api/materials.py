@@ -5,13 +5,39 @@ from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_current_user, get_db
 from app.models.learning import LearningMaterial, User
-from app.schemas.materials import MaterialUploadResponse
+from app.schemas.materials import MaterialListResponse, MaterialSummaryResponse, MaterialUploadResponse
 from app.services.embedding_service import embed_material_chunks
 from app.services.material_chunk_service import build_material_chunks
 from app.services.pdf_service import extract_pdf_pages, join_page_texts, save_upload_file, validate_pdf_upload
 from app.services.visual_chunk_service import build_visual_description_chunks
 
 router = APIRouter()
+
+
+@router.get("/materials", response_model=MaterialListResponse)
+def list_materials(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MaterialListResponse:
+    materials = (
+        db.query(LearningMaterial)
+        .filter(LearningMaterial.user_id == current_user.id)
+        .order_by(LearningMaterial.created_at.desc())
+        .all()
+    )
+
+    return MaterialListResponse(
+        materials=[
+            MaterialSummaryResponse(
+                id=material.id,
+                title=material.title,
+                extracted_text_length=len(material.extracted_text),
+                preview=material.extracted_text[:220],
+                created_at=material.created_at,
+            )
+            for material in materials
+        ]
+    )
 
 
 @router.post(
