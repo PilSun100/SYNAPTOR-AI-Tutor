@@ -204,6 +204,124 @@ class GeminiProvider:
         return _parse_tutor_chat(response.text or "")
 
 
+class FallbackLLMProvider:
+    source = "gemini+heuristic"
+
+    def __init__(self, primary: LLMProvider, fallback: LLMProvider) -> None:
+        self.primary = primary
+        self.fallback = fallback
+
+    def extract_concepts(self, text: str) -> list[ExtractedConcept]:
+        try:
+            return self.primary.extract_concepts(text)
+        except Exception:
+            return self.fallback.extract_concepts(text)
+
+    def generate_questions(
+        self,
+        concept_title: str,
+        concept_description: str,
+        material_text: str,
+        evidence_context: str = "",
+    ) -> list[GeneratedQuestion]:
+        try:
+            return self.primary.generate_questions(
+                concept_title,
+                concept_description,
+                material_text,
+                evidence_context,
+            )
+        except Exception:
+            return self.fallback.generate_questions(
+                concept_title,
+                concept_description,
+                material_text,
+                evidence_context,
+            )
+
+    def evaluate_answer(
+        self,
+        question_text: str,
+        expected_answer: str,
+        answer_text: str,
+        evidence_context: str = "",
+    ) -> EvaluatedAnswer:
+        try:
+            return self.primary.evaluate_answer(
+                question_text,
+                expected_answer,
+                answer_text,
+                evidence_context,
+            )
+        except Exception:
+            return self.fallback.evaluate_answer(
+                question_text,
+                expected_answer,
+                answer_text,
+                evidence_context,
+            )
+
+    def generate_hint(
+        self,
+        question_text: str,
+        expected_answer: str,
+        answer_text: str,
+        missing_points: str,
+        hint_level: int,
+        evidence_context: str = "",
+    ) -> GeneratedHint:
+        try:
+            return self.primary.generate_hint(
+                question_text,
+                expected_answer,
+                answer_text,
+                missing_points,
+                hint_level,
+                evidence_context,
+            )
+        except Exception:
+            return self.fallback.generate_hint(
+                question_text,
+                expected_answer,
+                answer_text,
+                missing_points,
+                hint_level,
+                evidence_context,
+            )
+
+    def evaluate_self_explanation(
+        self,
+        concept_title: str,
+        concept_description: str,
+        explanation_text: str,
+        evidence_context: str = "",
+    ) -> EvaluatedSelfExplanation:
+        try:
+            return self.primary.evaluate_self_explanation(
+                concept_title,
+                concept_description,
+                explanation_text,
+                evidence_context,
+            )
+        except Exception:
+            return self.fallback.evaluate_self_explanation(
+                concept_title,
+                concept_description,
+                explanation_text,
+                evidence_context,
+            )
+
+    def generate_tutor_chat(
+        self,
+        user_message: str,
+        evidence_context: str,
+    ) -> GeneratedTutorChat:
+        try:
+            return self.primary.generate_tutor_chat(user_message, evidence_context)
+        except Exception:
+            return self.fallback.generate_tutor_chat(user_message, evidence_context)
+
+
 class HeuristicProvider:
     source = "heuristic"
 
@@ -387,7 +505,7 @@ class HeuristicProvider:
 
 def get_llm_provider() -> LLMProvider:
     if settings.gemini_api_key:
-        return GeminiProvider()
+        return FallbackLLMProvider(GeminiProvider(), HeuristicProvider())
     return HeuristicProvider()
 
 
