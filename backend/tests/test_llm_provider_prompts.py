@@ -1,4 +1,5 @@
 from app.services.llm_provider import (
+    HeuristicProvider,
     _build_answer_evaluation_prompt,
     _build_tutor_chat_prompt,
     _parse_tutor_chat,
@@ -40,3 +41,23 @@ def test_tutor_chat_parser_wraps_non_json_response() -> None:
     assert parsed.learning_mode == "evidence_check"
     assert "Study Room" in parsed.next_action
     assert parsed.suggested_questions
+
+
+def test_tutor_chat_fallback_uses_content_not_evidence_metadata() -> None:
+    provider = HeuristicProvider()
+    response = provider.generate_tutor_chat(
+        user_message="Monte-Carlo Policy Gradient가 뭐야",
+        evidence_context=(
+            "[chunk_id=12, page=3, type=text, score=0.88]\n"
+            "Monte-Carlo Policy Gradient estimates a policy gradient from sampled returns.\n"
+            "It connects sampled trajectories with policy improvement."
+        ),
+    )
+
+    lowered = response.reply.lower()
+    assert "sampled returns" in lowered or "sampled trajectories" in lowered
+    assert "monte" in lowered
+    assert "chunk" not in lowered
+    assert "page" not in lowered
+    assert "type" not in lowered
+    assert "study room" in response.next_action.lower()

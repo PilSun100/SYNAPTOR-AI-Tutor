@@ -467,10 +467,11 @@ class HeuristicProvider:
         user_message: str,
         evidence_context: str,
     ) -> GeneratedTutorChat:
-        evidence_basis = _evidence_or_fallback(evidence_context, "")
+        evidence_basis = _clean_evidence_context(_evidence_or_fallback(evidence_context, ""))
         evidence_keywords = _keywords(evidence_basis)
         user_keywords = set(_keywords(user_message))
         overlap = [keyword for keyword in evidence_keywords if keyword in user_keywords][:5]
+        explanation_points = _relevant_evidence_points(evidence_basis, user_message)
 
         if not evidence_basis:
             return GeneratedTutorChat(
@@ -488,12 +489,16 @@ class HeuristicProvider:
 
         focus = ", ".join(overlap) if overlap else "검색된 근거"
         keywords = ", ".join(evidence_keywords[:4]) if evidence_keywords else focus
+        evidence_summary = " / ".join(explanation_points[:2])
+        if not evidence_summary:
+            evidence_summary = _short_text(evidence_basis, 180)
         return GeneratedTutorChat(
             reply=(
-                f"자료 근거 기준으로 보면, 지금 질문은 {focus}와 연결됩니다. "
+                f"자료에서 확인되는 핵심 단서는 {evidence_summary}입니다. "
+                f"따라서 지금 질문은 {focus}와 연결해서 이해하면 좋습니다. "
                 f"핵심 키워드는 {keywords}입니다. "
-                "이 개념은 자료에서 반복되는 조건, 관계, 결과를 연결해 이해하면 좋습니다. "
-                "스스로 확인해볼 질문은 '이 개념이 어떤 문제를 해결하려고 등장했는가?'입니다."
+                "다만 Study Room에서 직접 설명할 수 있도록 여기서는 구조만 잡아볼게요. "
+                "스스로 확인해볼 질문은 '이 단서들이 어떤 순서로 이어지는가?'입니다."
             ),
             learning_mode="active_recall",
             next_action="이제 Study Room에서 이 개념을 직접 설명해보세요.",
@@ -1130,8 +1135,83 @@ def _keywords(text: str) -> list[str]:
         "사용자",
         "합니다",
         "있습니다",
+        "chunk",
+        "chunk_id",
+        "id",
+        "page",
+        "type",
+        "score",
+        "text",
+        "visual",
+        "근거",
     }
     return [word for word in words if word not in stopwords]
+
+
+def _clean_evidence_context(evidence_context: str) -> str:
+    cleaned_lines = []
+    for raw_line in evidence_context.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("[chunk_id="):
+            continue
+        line = re.sub(r"\bchunk_id=\d+\b", "", line)
+        line = re.sub(r"\bpage=\d+\b", "", line)
+        line = re.sub(r"\btype=[a-z_]+\b", "", line, flags=re.I)
+        line = re.sub(r"\bscore=\d+(?:\.\d+)?\b", "", line)
+        line = re.sub(r"\s+", " ", line).strip(" ,")
+        if line:
+            cleaned_lines.append(line)
+    return "\n".join(cleaned_lines).strip()
+
+
+def _relevant_evidence_points(evidence_text: str, user_message: str) -> list[str]:
+    query_tokens = set(_keywords(user_message))
+    candidates = []
+    for index, sentence in enumerate(_split_evidence_sentences(evidence_text)):
+        tokens = set(_keywords(sentence))
+        if not tokens:
+            continue
+        overlap = len(tokens & query_tokens)
+        score = overlap * 3 + min(len(tokens), 10)
+        candidates.append((score, -index, sentence))
+
+    if not candidates:
+        return []
+
+    candidates.sort(reverse=True)
+    ordered = sorted(candidates[:3], key=lambda item: -item[1])
+    return [_short_text(sentence, 150) for _, _, sentence in ordered]
+
+
+def _split_evidence_sentences(text: str) -> list[str]:
+    if not text.strip():
+        return []
+    line_parts = []
+    for line in text.splitlines():
+        line_parts.extend(re.split(r"[•·]\s+|;\s+", line))
+
+    parts = []
+    for line in line_parts:
+        normalized = re.sub(r"\s+", " ", line).strip()
+        if normalized:
+            parts.extend(re.split(r"(?<=[.!?。！？])\s+", normalized))
+
+    if len(parts) == 1:
+        parts = re.split(r"\s{2,}|;\s+", parts[0])
+    return [
+        part.strip(" -–—")
+        for part in parts
+        if 8 <= len(part.strip()) <= 260
+    ]
+
+
+def _short_text(text: str, limit: int) -> str:
+    compact = re.sub(r"\s+", " ", text).strip()
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[: limit - 3]}..."
 
 
 def _evidence_or_fallback(evidence_context: str, fallback: str) -> str:
