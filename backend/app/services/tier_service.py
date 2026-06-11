@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.learning import Concept, ConceptMastery, LearningSession, MaterialMastery, UserAnswer, utc_now
+from app.services.concept_normalization_service import canonical_concepts
 
 TIERS = [
     (40, "초심자"),
@@ -52,6 +53,7 @@ def update_material_mastery(db: Session, session: LearningSession) -> MaterialMa
         .order_by(Concept.id.asc())
         .all()
     )
+    concepts = canonical_concepts(concepts)
     total_concepts = len(concepts)
     if total_concepts == 0:
         return None

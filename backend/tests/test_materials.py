@@ -171,3 +171,31 @@ def test_start_material_study_hides_other_users_materials() -> None:
 
         assert response.status_code == 404
         assert response.json()["detail"] == "학습 자료를 찾을 수 없습니다."
+
+
+def test_start_material_study_merges_numbered_concept_parts() -> None:
+    pdf_bytes = make_pdf_bytes(
+        "Linear Least Squares Prediction Algorithms (1)\n"
+        "LSTD estimates value function weights from sampled transitions.\n"
+        "Linear Least Squares Prediction Algorithms (2)\n"
+        "LSTD uses a least-squares fixed point equation for prediction."
+    )
+
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("numbered-concepts.pdf", pdf_bytes, "application/pdf")},
+            headers=headers,
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+
+        response = client.post(f"/api/materials/{material_id}/study/start", headers=headers)
+
+        body = response.json()
+        titles = [item["concept"]["title"] for item in body["concepts"]]
+        assert response.status_code == 200
+        assert "Linear Least Squares Prediction Algorithms" in titles
+        assert "Linear Least Squares Prediction Algorithms (1)" not in titles
+        assert "Linear Least Squares Prediction Algorithms (2)" not in titles

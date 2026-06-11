@@ -8,6 +8,7 @@ from app.models.learning import Concept, LearningMaterial, LearningSession, Ques
 from app.schemas.materials import MaterialListResponse, MaterialSummaryResponse, MaterialUploadResponse
 from app.schemas.study import MaterialMasterySummary, StudyConceptItem, StudyStartResponse
 from app.services.concept_service import extract_and_store_concepts
+from app.services.concept_normalization_service import base_concept_title, canonical_concepts
 from app.services.embedding_service import embed_material_chunks
 from app.services.llm_provider import get_llm_provider
 from app.services.material_chunk_service import build_material_chunks
@@ -128,6 +129,7 @@ def start_material_study(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=str(exc),
             ) from exc
+    concepts = canonical_concepts(concepts)
 
     session = LearningSession(material_id=material.id, user_id=current_user.id)
     db.add(session)
@@ -135,6 +137,9 @@ def start_material_study(
 
     study_items: list[StudyConceptItem] = []
     for concept in concepts:
+        normalized_title = base_concept_title(concept.title)
+        if concept.title != normalized_title:
+            concept.title = normalized_title
         questions = (
             db.query(Question)
             .filter(Question.concept_id == concept.id)

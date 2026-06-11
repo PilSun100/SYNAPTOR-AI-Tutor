@@ -519,6 +519,8 @@ def _build_concept_prompt(text: str) -> str:
 - 강의 제목, 과목명, 학기, 연도, 페이지 번호, 목차, 발표용 장식 문구는 제외하세요.
 - "Introduction to ...", "1st semester", "Mobile System Engineering"처럼 문서 메타데이터에 가까운 항목은 개념으로 만들지 마세요.
 - 슬라이드 제목이라도 실제 학습 개념이면 구체적인 개념명으로 정리하세요. 예: "TD exploits Markov property" -> "TD와 Markov property"
+- 같은 개념이 "(1)", "(2)", "Part 1", "Part 2"처럼 여러 슬라이드로 나뉘면 하나의 개념으로 합치세요.
+- 합친 개념이 너무 넓으면 번호를 붙이지 말고 하위 주제가 드러나도록 구체적인 개념명으로 세분화하세요.
 
 반드시 JSON 배열만 반환하세요. Markdown 코드블록은 쓰지 마세요.
 각 항목은 다음 필드를 가져야 합니다.
@@ -555,6 +557,7 @@ def _build_question_prompt(
 - 개념 이해, 적용, 오개념 탐지를 섞으세요.
 - 아래 제공된 근거 chunk만 사용하세요.
 - 근거 chunk로 확인할 수 없는 사실은 만들지 마세요.
+- 개념명이 "(1)", "(2)"처럼 번호로만 나뉘어 있으면 번호를 질문에 노출하지 말고 하나의 통합 개념으로 묻거나, 근거에 나온 하위 주제를 명시해 구체적으로 물으세요.
 
 개념명:
 {concept_title}
@@ -955,6 +958,7 @@ def _make_title(chunk: str) -> str:
     if not words:
         return "핵심 개념"
     title = " ".join(words[:6])
+    title = re.sub(r"\s*\(\d+\)\s*$", "", title).strip()
     title = re.sub(r"\bMobile System Engineering\b", "", title, flags=re.IGNORECASE).strip()
     return title[:80] or "핵심 개념"
 
@@ -1047,6 +1051,15 @@ def _line_score(text: str) -> int:
         "backward": 2,
         "prediction": 2,
         "value": 2,
+        "persistent": 3,
+        "volume": 3,
+        "storage": 2,
+        "pod": 2,
+        "pvc": 3,
+        "볼륨": 3,
+        "스토리지": 2,
+        "클러스터": 2,
+        "생명 주기": 2,
     }
     for pattern, weight in technical_patterns.items():
         if pattern in normalized:
