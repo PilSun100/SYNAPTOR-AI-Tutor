@@ -50,6 +50,33 @@ def test_tutor_chat_uses_material_evidence() -> None:
         assert body["source"] in {"gemini", "heuristic"}
 
 
+def test_tutor_chat_handles_missing_evidence_without_hallucinating() -> None:
+    pdf_bytes = make_pdf_bytes("Active recall improves long-term memory.")
+
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("active-recall-short.pdf", pdf_bytes, "application/pdf")},
+            headers=headers,
+        )
+        material_id = upload_response.json()["id"]
+
+        response = client.post(
+            f"/api/materials/{material_id}/chat",
+            json={"message": "쿠버네티스 Persistent Volume Claim을 설명해줘"},
+            headers=headers,
+        )
+
+        body = response.json()
+        assert response.status_code == 200
+        assert body["reply"]
+        assert "근거를 찾지 못했습니다" in body["reply"]
+        assert body["learning_mode"] == "evidence_check"
+        assert body["evidence"] == []
+        assert body["suggested_questions"]
+
+
 def test_tutor_chat_rejects_other_users_material() -> None:
     with TestClient(create_app()) as client:
         owner_headers = auth_headers(client)

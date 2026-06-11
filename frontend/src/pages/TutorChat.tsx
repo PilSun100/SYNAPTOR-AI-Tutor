@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, BookOpen, FileText, MessageSquareText, Send, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowRight, BookOpen, FileText, MessageSquareText, Send, Sparkles } from 'lucide-react';
 import { getMaterials, sendTutorChatMessage } from '../api/client';
 import type { MaterialSummary, TutorChatResponse } from '../types/api';
 import './TutorChat.css';
@@ -71,7 +71,7 @@ export function TutorChat() {
       return;
     }
     if (!selectedMaterialId) {
-      setError('먼저 채팅할 학습 자료를 선택하세요.');
+      setError('Study에서 PDF를 먼저 업로드하거나, 채팅할 자료를 선택하세요.');
       return;
     }
 
@@ -96,7 +96,12 @@ export function TutorChat() {
       };
       setMessages((current) => [...current, assistantTurn]);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : '튜터 응답을 생성하지 못했습니다.');
+      const message = caught instanceof Error ? caught.message : '';
+      setError(
+        message.includes('학습 자료를 찾을 수 없습니다')
+          ? '선택한 자료를 찾을 수 없습니다. Study에서 자료를 다시 선택해 주세요.'
+          : '답변을 만들지 못했습니다. 자료를 다시 선택하거나 자료에 나온 키워드로 짧게 질문해 주세요.',
+      );
     } finally {
       setSending(false);
     }
@@ -107,7 +112,7 @@ export function TutorChat() {
       <header className="tutor-chat-header">
         <div>
           <h1>AI Chat</h1>
-          <p className="subtitle">정답을 바로 받기보다, 자료를 근거로 한 질문과 힌트로 먼저 생각해봅니다.</p>
+          <p className="subtitle">업로드한 강의자료를 근거로 개념을 짧게 이해하고, Study에서 직접 설명해봅니다.</p>
         </div>
         <Link className="glow-btn" to="/study">
           <BookOpen size={20} />
@@ -144,7 +149,7 @@ export function TutorChat() {
           </label>
           <div className="chat-mode-pill">
             <Sparkles size={16} />
-            Socratic Coach
+            자료 설명 모드
           </div>
         </div>
 
@@ -152,8 +157,11 @@ export function TutorChat() {
           <div className="chat-empty-material">
             <MessageSquareText size={34} />
             <strong>채팅할 자료가 없습니다.</strong>
-            <p>Study에서 PDF를 먼저 업로드하면 자료 기반 코칭을 시작할 수 있습니다.</p>
-            <Link className="chat-secondary-link" to="/study">자료 업로드하기</Link>
+            <p>Study에서 PDF를 먼저 업로드하세요. 업로드한 자료를 기준으로만 설명할 수 있습니다.</p>
+            <Link className="glow-btn chat-inline-action" to="/study">
+              <BookOpen size={18} />
+              Study에서 PDF 업로드
+            </Link>
           </div>
         )}
 
@@ -165,18 +173,18 @@ export function TutorChat() {
         )}
 
         <div className="chat-thread">
-          {messages.length === 0 && (
+          {selectedMaterial && messages.length === 0 && (
             <div className="chat-welcome">
               <MessageSquareText size={42} className="text-gradient" />
-              <strong>먼저 생각하게 도와줄게요.</strong>
-              <p>질문을 보내면 AI가 바로 정답을 길게 설명하지 않고, 자료 근거 안에서 회상 질문과 단서를 제공합니다.</p>
+              <strong>자료를 보면서 같이 이해해볼게요.</strong>
+              <p>질문을 보내면 업로드한 자료 근거 안에서 짧게 설명하고, 마지막에 Study Room에서 직접 설명해볼 질문을 제안합니다.</p>
               <div className="chat-starter-list">
                 {[
-                  '이 자료에서 중요한 개념을 하나 질문으로 점검해줘',
-                  '내가 먼저 떠올릴 수 있게 작은 힌트부터 줘',
-                  '헷갈리기 쉬운 두 개념을 비교 질문으로 만들어줘',
+                  '이 자료의 핵심 개념을 쉽게 설명해줘',
+                  '방금 자료에서 중요한 키워드 3개만 정리해줘',
+                  '헷갈리기 쉬운 개념을 비교해서 설명해줘',
                 ].map((question) => (
-                  <button key={question} onClick={() => void submitMessage(question)} type="button">
+                  <button disabled={sending} key={question} onClick={() => void submitMessage(question)} type="button">
                     {question}
                   </button>
                 ))}
@@ -200,18 +208,22 @@ export function TutorChat() {
                   {message.response.suggested_questions.length > 0 && (
                     <div className="chat-suggestions">
                       {message.response.suggested_questions.map((question) => (
-                        <button key={question} onClick={() => void submitMessage(question)} type="button">
+                        <button disabled={sending} key={question} onClick={() => void submitMessage(question)} type="button">
                           {question}
                         </button>
                       ))}
                     </div>
                   )}
+                  <Link className="chat-study-cta" to="/study">
+                    Study Room에서 연습하기
+                    <ArrowRight size={16} />
+                  </Link>
                 </div>
               )}
             </article>
           ))}
 
-          {sending && <div className="chat-loading">자료 근거를 보고 짧은 코칭 응답을 준비하는 중입니다.</div>}
+          {sending && <div className="chat-loading">업로드한 자료 근거를 확인하고 짧은 설명을 준비하는 중입니다.</div>}
         </div>
 
         <form
@@ -224,7 +236,7 @@ export function TutorChat() {
           <input
             disabled={!selectedMaterialId || sending}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="예: 바로 답 말고 내가 떠올릴 수 있게 힌트부터 줘"
+            placeholder="예: 이 개념을 쉽게 설명해줘"
             value={input}
           />
           <button className="glow-btn" disabled={!input.trim() || !selectedMaterialId || sending} type="submit">

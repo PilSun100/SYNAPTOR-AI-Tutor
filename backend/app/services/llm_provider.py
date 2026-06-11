@@ -475,11 +475,11 @@ class HeuristicProvider:
         if not evidence_basis:
             return GeneratedTutorChat(
                 reply=(
-                    "업로드 자료에서 이 질문을 뒷받침할 근거를 충분히 찾지 못했습니다. "
+                    "업로드된 자료에서 이 질문을 뒷받침할 근거를 충분히 찾지 못했습니다. "
                     "자료 안의 개념명이나 페이지에 나온 키워드로 다시 질문해보세요."
                 ),
                 learning_mode="evidence_check",
-                next_action="질문에 포함할 핵심 용어를 하나 더 구체화해보세요.",
+                next_action="Study에서 자료가 올바르게 업로드됐는지 확인하고, 자료 안의 용어로 다시 질문해보세요.",
                 suggested_questions=[
                     "이 자료에서 가장 중요한 개념은 무엇인가요?",
                     "방금 질문과 관련된 페이지 근거를 찾아줄 수 있나요?",
@@ -487,18 +487,20 @@ class HeuristicProvider:
             )
 
         focus = ", ".join(overlap) if overlap else "검색된 근거"
+        keywords = ", ".join(evidence_keywords[:4]) if evidence_keywords else focus
         return GeneratedTutorChat(
             reply=(
                 f"자료 근거 기준으로 보면, 지금 질문은 {focus}와 연결됩니다. "
-                "바로 정답을 외우기보다 먼저 그 개념이 어떤 문제를 해결하려는지 한 문장으로 말해보세요. "
-                "그다음 근거 문장에서 반복되는 조건, 관계, 결과를 분리하면 이해가 더 안정됩니다."
+                f"핵심 키워드는 {keywords}입니다. "
+                "이 개념은 자료에서 반복되는 조건, 관계, 결과를 연결해 이해하면 좋습니다. "
+                "스스로 확인해볼 질문은 '이 개념이 어떤 문제를 해결하려고 등장했는가?'입니다."
             ),
             learning_mode="active_recall",
-            next_action="근거를 보지 않고 핵심 관계를 한 문장으로 먼저 설명해보세요.",
+            next_action="이제 Study Room에서 이 개념을 직접 설명해보세요.",
             suggested_questions=[
-                "이 개념을 기억에서 꺼내 한 문장으로 설명해보세요.",
-                "자료 근거에서 원인과 결과 관계를 나눠 설명해보세요.",
-                "이 개념을 헷갈리기 쉬운 개념과 비교해보세요.",
+                "이 개념을 쉬운 말로 다시 설명해줘",
+                "핵심 키워드만 짧게 정리해줘",
+                "Study Room에서 답할 질문으로 바꿔줘",
             ],
         )
 
@@ -702,21 +704,29 @@ def _build_self_explanation_prompt(
 def _build_tutor_chat_prompt(user_message: str, evidence_context: str) -> str:
     return f"""
 당신은 SYNAPTOR의 뇌과학 기반 개인화 AI 튜터입니다.
-사용자 질문에 답하되, 일반 챗봇처럼 장황하게 설명하지 말고 업로드 자료 근거를 바탕으로 학습 행동을 설계하세요.
+AI Chat은 업로드한 강의자료를 이해하는 설명 공간이고, Study Room은 사용자가 직접 설명하며 검증받는 공간입니다.
+사용자 질문에 답하되, 일반 챗봇처럼 장황하게 설명하지 말고 업로드 자료 근거를 바탕으로 짧고 명확하게 설명하세요.
 
 반드시 JSON 객체만 반환하세요. Markdown 코드블록은 쓰지 마세요.
 필드는 다음과 같습니다.
-- reply: 사용자에게 보여줄 답변. 자료 근거를 요약하되 정답을 모두 공개하기보다 능동 회상을 유도
+- reply: 사용자에게 보여줄 답변. 자료 근거 안에서 개념을 설명하고 핵심 키워드 2~4개와 이해 확인 질문 1개를 포함
 - learning_mode: active_recall, feynman_check, misconception_repair, evidence_check, example_first 중 하나
-- next_action: 사용자가 바로 할 다음 학습 행동 한 문장
+- next_action: Study Room으로 이어지는 사용자의 다음 행동 한 문장
 - suggested_questions: 사용자가 이어서 물어보거나 답해볼 질문 2~3개 배열
 
 엄격한 근거 규칙:
 - 제공된 근거 chunk만 사용하세요.
-- 근거 chunk에 없는 내용은 "자료에서 확인되지 않습니다"라고 말하세요.
+- 자료에 근거가 있는 내용만 설명하세요.
+- 근거 chunk에 없는 내용은 "업로드된 자료에서는 확인되지 않습니다"라고 말하세요.
 - 이미지/도표 근거 chunk가 있으면 그것이 시각 자료 설명임을 반영하세요.
-- 사용자가 정답을 요구해도 가능한 한 먼저 생각할 단서와 구조를 제공하세요.
-- 단, 사용자가 개념 설명을 요구하면 근거 범위 안에서 간결하게 설명하세요.
+- 답변은 한국어로 작성하세요.
+- 영어 자료라도 사용자가 한글로 질문하면 한글로 설명하세요.
+- 자료 언어와 사용자 언어가 달라도 의미를 기준으로 설명하세요.
+- 사용자가 "설명해줘", "쉽게 알려줘", "이 개념이 뭐야?"라고 물으면 자료 evidence 안에서 명확하게 설명하세요.
+- 사용자가 개념 설명을 요구하면 근거 범위 안에서 간결하게 설명하세요.
+- Study Room의 개념 설명 미션 정답을 그대로 외우게 만드는 긴 모범답안은 피하세요.
+- 답변은 너무 길지 않게 3~6문장으로 유지하세요.
+- 답변 마지막에는 사용자가 Study Room에서 직접 설명해볼 수 있는 질문을 하나 제안하세요.
 
 사용자 질문:
 {user_message}
@@ -866,11 +876,11 @@ def _parse_tutor_chat(raw_text: str) -> GeneratedTutorChat:
 
     try:
         data = json.loads(json_text)
-    except json.JSONDecodeError as exc:
-        raise ValueError("LLM 응답을 JSON으로 해석할 수 없습니다.") from exc
+    except json.JSONDecodeError:
+        return _fallback_tutor_chat_from_text(raw_text)
 
     if not isinstance(data, dict):
-        raise ValueError("LLM 응답은 JSON 객체여야 합니다.")
+        return _fallback_tutor_chat_from_text(raw_text)
 
     allowed_modes = {
         "active_recall",
@@ -890,11 +900,29 @@ def _parse_tutor_chat(raw_text: str) -> GeneratedTutorChat:
     return GeneratedTutorChat(
         reply=str(data.get("reply", "")).strip() or "자료 근거를 바탕으로 다시 질문을 구체화해보세요.",
         learning_mode=learning_mode,
-        next_action=str(data.get("next_action", "")).strip() or "핵심 개념을 한 문장으로 먼저 떠올려보세요.",
+        next_action=str(data.get("next_action", "")).strip() or "이제 Study Room에서 이 개념을 직접 설명해보세요.",
         suggested_questions=[
             str(question).strip()
             for question in suggested_questions[:3]
             if str(question).strip()
+        ],
+    )
+
+
+def _fallback_tutor_chat_from_text(raw_text: str) -> GeneratedTutorChat:
+    reply = re.sub(r"\s+", " ", raw_text).strip()
+    if not reply:
+        reply = "자료 근거를 바탕으로 답변을 만들지 못했습니다. 자료 안의 개념명이나 키워드로 다시 질문해보세요."
+    if len(reply) > 700:
+        reply = f"{reply[:697]}..."
+    return GeneratedTutorChat(
+        reply=reply,
+        learning_mode="evidence_check",
+        next_action="이제 Study Room에서 이 개념을 직접 설명해보세요.",
+        suggested_questions=[
+            "이 개념의 핵심 키워드를 다시 정리해줘",
+            "이 개념을 쉬운 말로 한 번 더 설명해줘",
+            "Study Room에서 어떻게 설명하면 좋을지 질문으로 바꿔줘",
         ],
     )
 
