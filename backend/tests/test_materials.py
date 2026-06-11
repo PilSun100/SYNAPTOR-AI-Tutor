@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal
 from app.main import create_app
-from app.models.learning import Concept, MaterialChunk, Question
+from app.models.learning import Concept, LearningMaterial, MaterialChunk, Question
 from auth_helpers import auth_headers
 
 
@@ -79,6 +79,58 @@ def test_list_materials_returns_current_user_uploads() -> None:
         assert len(body["materials"]) >= 1
         assert body["materials"][0]["title"] == "review"
         assert "Spaced repetition" in body["materials"][0]["preview"]
+
+
+def test_delete_material_removes_current_user_material() -> None:
+    pdf_bytes = make_pdf_bytes("Deletion should remove this material and its generated study data.")
+
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("delete-me.pdf", pdf_bytes, "application/pdf")},
+            headers=headers,
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+
+        study_response = client.post(f"/api/materials/{material_id}/study/start", headers=headers)
+        assert study_response.status_code == 200
+
+        response = client.delete(f"/api/materials/{material_id}", headers=headers)
+        assert response.status_code == 204
+
+        list_response = client.get("/api/materials", headers=headers)
+        listed_ids = [item["id"] for item in list_response.json()["materials"]]
+        assert material_id not in listed_ids
+
+        with SessionLocal() as db:
+            assert db.get(LearningMaterial, material_id) is None
+            assert db.query(Concept).filter(Concept.material_id == material_id).count() == 0
+            assert db.query(MaterialChunk).filter(MaterialChunk.material_id == material_id).count() == 0
+
+
+def test_delete_material_rejects_other_users_material() -> None:
+    pdf_bytes = make_pdf_bytes("Only the owner can delete this material.")
+
+    with TestClient(create_app()) as client:
+        owner_headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("private-delete.pdf", pdf_bytes, "application/pdf")},
+            headers=owner_headers,
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+
+        other_headers = auth_headers(client)
+        response = client.delete(f"/api/materials/{material_id}", headers=other_headers)
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "학습 자료를 찾을 수 없습니다."
+
+        with SessionLocal() as db:
+            assert db.get(LearningMaterial, material_id) is not None
 
 
 def test_start_material_study_prepares_first_question() -> None:

@@ -140,6 +140,12 @@ export function getMaterials(): Promise<MaterialListResponse> {
   return request<MaterialListResponse>('/materials');
 }
 
+export function deleteMaterial(materialId: number): Promise<void> {
+  return request<void>(`/materials/${materialId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function uploadMaterial(file: File): Promise<MaterialUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);

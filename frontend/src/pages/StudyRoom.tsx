@@ -9,8 +9,11 @@ import {
   Loader2,
   Send,
   Sparkles,
+  Trash2,
+  X,
 } from 'lucide-react';
 import {
+  deleteMaterial,
   getMaterials,
   requestQuestionHint,
   startMaterialStudy,
@@ -131,6 +134,19 @@ export const StudyRoom = () => {
     setAnswerStartedAt(Date.now());
   };
 
+  const resetStudy = () => {
+    setMaterial(null);
+    setSessionId(null);
+    setStudyItems([]);
+    setActiveIndex(0);
+    setAnswerText('');
+    setAnswerStartedAt(null);
+    setAnswersByQuestion({});
+    setHintsByQuestion({});
+    setMaterialMastery(null);
+    setError('');
+  };
+
   const handleUploadAndStart = () =>
     runAction('자료 분석 중', async () => {
       if (!file) {
@@ -152,6 +168,20 @@ export const StudyRoom = () => {
   const handleStartExisting = (materialId: number) =>
     runAction('학습 준비 중', async () => {
       await beginStudy(materialId);
+    });
+
+  const handleDeleteMaterial = (item: MaterialSummary) =>
+    runAction('자료 삭제 중', async () => {
+      const confirmed = window.confirm(`'${item.title}' 자료를 삭제할까요? 학습 기록과 힌트 기록도 함께 삭제됩니다.`);
+      if (!confirmed) {
+        return;
+      }
+
+      await deleteMaterial(item.id);
+      setMaterials((current) => current.filter((materialItem) => materialItem.id !== item.id));
+      if (material?.id === item.id) {
+        resetStudy();
+      }
     });
 
   const handleRequestHint = () =>
@@ -276,6 +306,19 @@ export const StudyRoom = () => {
           </div>
         </div>
 
+        {(activeItem || sessionComplete) && (
+          <div className="study-session-actions">
+            <button className="secondary-btn" disabled={Boolean(loadingLabel)} onClick={resetStudy} type="button">
+              <FileText size={18} />
+              다른 자료 선택
+            </button>
+            <button className="secondary-btn quiet-danger" disabled={Boolean(loadingLabel)} onClick={resetStudy} type="button">
+              <X size={18} />
+              학습 종료
+            </button>
+          </div>
+        )}
+
         {!activeItem && (
           <div className="study-start-grid">
             <section className="study-start-panel">
@@ -305,17 +348,27 @@ export const StudyRoom = () => {
               <div className="material-list">
                 {materials.length === 0 && <p className="muted">아직 업로드한 자료가 없습니다.</p>}
                 {materials.map((item) => (
-                  <button
-                    className="material-item"
-                    disabled={Boolean(loadingLabel)}
-                    key={item.id}
-                    onClick={() => handleStartExisting(item.id)}
-                    type="button"
-                  >
-                    <strong>{item.title}</strong>
-                    <span>{item.extracted_text_length.toLocaleString()}자</span>
-                    <p>{item.preview || '미리보기가 없습니다.'}</p>
-                  </button>
+                  <article className="material-item" key={item.id}>
+                    <button
+                      className="material-start-button"
+                      disabled={Boolean(loadingLabel)}
+                      onClick={() => handleStartExisting(item.id)}
+                      type="button"
+                    >
+                      <strong>{item.title}</strong>
+                      <span>{item.extracted_text_length.toLocaleString()}자</span>
+                      <p>{item.preview || '미리보기가 없습니다.'}</p>
+                    </button>
+                    <button
+                      aria-label={`${item.title} 삭제`}
+                      className="material-delete-button"
+                      disabled={Boolean(loadingLabel)}
+                      onClick={() => handleDeleteMaterial(item)}
+                      type="button"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </article>
                 ))}
               </div>
             </section>

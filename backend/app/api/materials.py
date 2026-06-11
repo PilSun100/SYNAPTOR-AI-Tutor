@@ -1,10 +1,22 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_current_user, get_db
-from app.models.learning import Concept, LearningMaterial, LearningSession, Question, User, UserAnswer
+from app.models.learning import (
+    Concept,
+    EvidenceLog,
+    HintLog,
+    LearningMaterial,
+    LearningSession,
+    MaterialMastery,
+    Question,
+    SelfExplanation,
+    User,
+    UserAnswer,
+)
 from app.schemas.materials import MaterialListResponse, MaterialSummaryResponse, MaterialUploadResponse
 from app.schemas.study import MaterialMasterySummary, StudyConceptItem, StudyStartResponse
 from app.services.concept_service import extract_and_store_concepts
@@ -45,6 +57,68 @@ def list_materials(
             for material in materials
         ]
     )
+
+
+@router.delete("/materials/{material_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_material(
+    material_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    material = db.get(LearningMaterial, material_id)
+    if material is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="학습 자료를 찾을 수 없습니다.",
+        )
+    ensure_material_owner(material, current_user)
+
+    concept_ids = [concept.id for concept in material.concepts]
+    question_ids = [
+        question.id
+        for concept in material.concepts
+        for question in concept.questions
+    ]
+    session_ids = [session.id for session in material.sessions]
+    answer_ids = [
+        answer.id
+        for session in material.sessions
+        for answer in session.answers
+    ]
+    chunk_ids = [chunk.id for chunk in material.chunks]
+
+    if chunk_ids or question_ids or answer_ids:
+        db.query(EvidenceLog).filter(
+            or_(
+                EvidenceLog.chunk_id.in_(chunk_ids or [-1]),
+                EvidenceLog.related_question_id.in_(question_ids or [-1]),
+                EvidenceLog.related_answer_id.in_(answer_ids or [-1]),
+            )
+        ).delete(synchronize_session=False)
+
+    if concept_ids or question_ids or session_ids or answer_ids:
+        db.query(HintLog).filter(
+            or_(
+                HintLog.concept_id.in_(concept_ids or [-1]),
+                HintLog.question_id.in_(question_ids or [-1]),
+                HintLog.session_id.in_(session_ids or [-1]),
+                HintLog.user_answer_id.in_(answer_ids or [-1]),
+            )
+        ).delete(synchronize_session=False)
+
+    if concept_ids:
+        db.query(SelfExplanation).filter(SelfExplanation.concept_id.in_(concept_ids)).delete(synchronize_session=False)
+    db.query(MaterialMastery).filter(MaterialMastery.material_id == material.id).delete(synchronize_session=False)
+
+    file_path = Path(material.file_path) if material.file_path else None
+    db.delete(material)
+    db.commit()
+
+    if file_path and file_path.exists():
+        try:
+            file_path.unlink()
+        except OSError:
+            pass
 
 
 @router.post(
