@@ -11,13 +11,14 @@ import type {
   QuestionGenerationResponse,
   SelfExplanationResponse,
   SessionReportResponse,
+  StudyStartResponse,
   TutorChatResponse,
   User,
 } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api';
-const ACCESS_TOKEN_KEY = 'brain_sync_access_token';
-const REFRESH_TOKEN_KEY = 'brain_sync_refresh_token';
+const ACCESS_TOKEN_KEY = 'synaptor_access_token';
+const REFRESH_TOKEN_KEY = 'synaptor_refresh_token';
 
 export function getStoredAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -149,6 +150,12 @@ export async function uploadMaterial(file: File): Promise<MaterialUploadResponse
   });
 }
 
+export function startMaterialStudy(materialId: number): Promise<StudyStartResponse> {
+  return request<StudyStartResponse>(`/materials/${materialId}/study/start`, {
+    method: 'POST',
+  });
+}
+
 export function extractConcepts(materialId: number): Promise<ConceptExtractionResponse> {
   return request<ConceptExtractionResponse>(`/materials/${materialId}/concepts/extract`, {
     method: 'POST',
@@ -183,6 +190,23 @@ export function requestHint(answerId: number, hintLevel: number): Promise<HintRe
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hint_level: hintLevel }),
+  });
+}
+
+export function requestQuestionHint(
+  questionId: number,
+  sessionId: number,
+  hintLevel: number,
+  stuckReason?: string,
+): Promise<HintResponse> {
+  return request<HintResponse>(`/questions/${questionId}/hint`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: sessionId,
+      hint_level: hintLevel,
+      stuck_reason: stuckReason,
+    }),
   });
 }
 

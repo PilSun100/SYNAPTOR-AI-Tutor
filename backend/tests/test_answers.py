@@ -65,6 +65,10 @@ def test_submit_answer_evaluates_and_stores_result() -> None:
         assert body["answer_text"].startswith("Active recall")
         assert body["source"] in {"heuristic", "gemini"}
         assert body["feedback"]
+        assert body["hints_used"] == 0
+        assert body["hint_budget"] in {3, 4, 5}
+        assert 0 <= body["concept_score"] <= 100
+        assert body["concept_tier"] in {"초심자", "견습생", "숙련자", "탐구자", "현자"}
         assert body["response_time"] == 12.5
         assert body["adaptive_state"]["learner_level_label"]
         assert body["adaptive_state"]["next_difficulty"] in {"easy", "medium", "hard"}
@@ -102,3 +106,49 @@ def test_submit_answer_returns_404_for_missing_question() -> None:
 
         assert response.status_code == 404
         assert response.json()["detail"] == "질문을 찾을 수 없습니다."
+
+
+def test_submit_answer_links_pre_answer_hints_into_score() -> None:
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={
+                "file": (
+                    "hint-aware-score.pdf",
+                    make_pdf_bytes("Retrieval practice improves memory when learners answer before review."),
+                    "application/pdf",
+                )
+            },
+            headers=headers,
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+        study_response = client.post(f"/api/materials/{material_id}/study/start", headers=headers)
+        assert study_response.status_code == 200
+        study = study_response.json()
+        session_id = study["session_id"]
+        question_id = study["concepts"][0]["question"]["id"]
+
+        hint_response = client.post(
+            f"/api/questions/{question_id}/hint",
+            json={"session_id": session_id, "hint_level": 1},
+            headers=headers,
+        )
+        assert hint_response.status_code == 201
+
+        answer_response = client.post(
+            f"/api/questions/{question_id}/answer",
+            json={
+                "session_id": session_id,
+                "answer_text": "Retrieval practice means answering from memory before review.",
+            },
+            headers=headers,
+        )
+
+        body = answer_response.json()
+        assert answer_response.status_code == 201
+        assert body["hints_used"] == 1
+        assert 0 <= body["concept_score"] <= 100
+        assert body["material_completed_concepts"] >= 1
+        assert body["material_total_concepts"] >= body["material_completed_concepts"]

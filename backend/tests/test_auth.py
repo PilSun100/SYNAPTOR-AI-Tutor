@@ -87,7 +87,7 @@ def test_production_accepts_strong_custom_jwt_secret() -> None:
     production_settings = Settings(
         _env_file=None,
         environment="production",
-        jwt_secret_key="brain-sync-production-secret-at-least-32-chars",
+        jwt_secret_key="synaptor-production-secret-at-least-32-chars",
     )
 
     production_settings.validate_runtime_security()

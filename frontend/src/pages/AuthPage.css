@@ -2,17 +2,17 @@
   min-height: 100vh;
   width: 100vw;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
-  gap: 32px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 440px);
+  gap: 48px;
   align-items: center;
-  padding: 40px;
+  padding: 48px;
 }
 
 .auth-product-panel {
-  max-width: 760px;
+  max-width: 780px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 30px;
 }
 
 .auth-brand {
@@ -21,13 +21,24 @@
   gap: 12px;
   font-size: 1.2rem;
   font-weight: 700;
+  color: var(--primary-strong);
+}
+
+.auth-brand img {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  object-position: left center;
+  background: white;
 }
 
 .auth-product-panel h1 {
   max-width: 720px;
   margin-bottom: 16px;
-  font-size: 3.4rem;
+  font-size: 3.15rem;
   line-height: 1.08;
+  color: var(--text-primary);
 }
 
 .auth-product-panel p {
@@ -48,7 +59,8 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-surface);
+  box-shadow: var(--panel-shadow);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -61,7 +73,7 @@
 }
 
 .auth-form-panel {
-  padding: 24px;
+  padding: 26px;
 }
 
 .auth-mode-toggle {
@@ -72,7 +84,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 4px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-muted);
 }
 
 .auth-mode-toggle button {
@@ -88,7 +100,8 @@
 
 .auth-mode-toggle button.active {
   color: var(--text-primary);
-  background: rgba(20, 184, 166, 0.14);
+  background: var(--bg-surface);
+  box-shadow: 0 2px 8px rgba(16, 32, 39, 0.08);
 }
 
 .auth-form {
@@ -115,7 +128,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-quiet);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -137,15 +150,15 @@
 }
 
 .auth-input-wrap input::placeholder {
-  color: rgba(148, 163, 184, 0.72);
+  color: var(--text-muted);
 }
 
 .auth-error {
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  border: 1px solid rgba(217, 119, 6, 0.35);
   border-radius: 8px;
   padding: 10px 12px;
-  color: #fde68a;
-  background: rgba(251, 191, 36, 0.1);
+  color: #92400e;
+  background: var(--accent-soft);
 }
 
 .auth-submit {
@@ -161,6 +174,13 @@
   justify-content: center;
   gap: 12px;
   color: var(--text-secondary);
+}
+
+.loading-brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
 @media (max-width: 960px) {

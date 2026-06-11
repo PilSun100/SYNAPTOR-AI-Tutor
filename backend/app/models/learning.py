@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -139,12 +139,17 @@ class HintLog(Base):
     __tablename__ = "hint_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_answer_id: Mapped[int] = mapped_column(ForeignKey("user_answers.id"), nullable=False)
+    user_answer_id: Mapped[int | None] = mapped_column(ForeignKey("user_answers.id"), nullable=True)
+    session_id: Mapped[int | None] = mapped_column(ForeignKey("learning_sessions.id"), nullable=True)
+    question_id: Mapped[int | None] = mapped_column(ForeignKey("questions.id"), nullable=True)
+    concept_id: Mapped[int | None] = mapped_column(ForeignKey("concepts.id"), nullable=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     hint_level: Mapped[int] = mapped_column(Integer, nullable=False)
     hint_text: Mapped[str] = mapped_column(Text, nullable=False)
+    stuck_reason: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
-    user_answer: Mapped[UserAnswer] = relationship(back_populates="hints")
+    user_answer: Mapped[UserAnswer | None] = relationship(back_populates="hints")
 
 
 class EvidenceLog(Base):
@@ -196,6 +201,8 @@ class ConceptMastery(Base):
     total_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     correct_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     hint_used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    concept_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    tier_name: Mapped[str] = mapped_column(String(50), nullable=False, default="초심자")
 
     user: Mapped["User | None"] = relationship(back_populates="mastery_records")
     concept: Mapped[Concept] = relationship(back_populates="mastery")
@@ -216,6 +223,10 @@ class User(Base):
     sessions: Mapped[list[LearningSession]] = relationship(back_populates="user")
     mastery_records: Mapped[list[ConceptMastery]] = relationship(back_populates="user")
     learning_profile: Mapped["UserLearningProfile | None"] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    material_mastery_records: Mapped[list["MaterialMastery"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
@@ -254,3 +265,21 @@ class UserLearningProfile(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
     user: Mapped[User] = relationship(back_populates="learning_profile")
+
+
+class MaterialMastery(Base):
+    __tablename__ = "material_mastery"
+    __table_args__ = (UniqueConstraint("user_id", "material_id", name="uq_material_mastery_user_material"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    material_id: Mapped[int] = mapped_column(ForeignKey("learning_materials.id"), nullable=False)
+    material_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    tier_name: Mapped[str] = mapped_column(String(50), nullable=False, default="초심자")
+    completed_concepts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_concepts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    user: Mapped[User] = relationship(back_populates="material_mastery_records")
+    material: Mapped[LearningMaterial] = relationship()

@@ -33,7 +33,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
-        description="Backend API for the Brain-Sync personalized AI learning tutor.",
+        description="Backend API for the SYNAPTOR personalized AI learning tutor.",
         lifespan=lifespan,
     )
 

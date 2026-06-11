@@ -10,6 +10,8 @@ class ReportConceptItem(BaseModel):
     title: str
     mastery_level: float | None = None
     learner_level_label: str | None = None
+    concept_score: float | None = None
+    tier_name: str | None = None
     next_difficulty: str | None = None
     next_question_type: str | None = None
     next_review_at: datetime | None = None
@@ -24,6 +26,10 @@ class SessionReportResponse(BaseModel):
     ended_at: datetime | None
     total_answers: int
     average_score: float
+    material_score: float | None = None
+    material_tier: str | None = None
+    material_completed_concepts: int | None = None
+    material_total_concepts: int | None = None
     self_correct_count: int
     hinted_correct_count: int
     repeated_wrong_count: int

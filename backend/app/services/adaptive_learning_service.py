@@ -157,16 +157,14 @@ def build_adaptive_state(concept: Concept, mastery: ConceptMastery) -> AdaptiveL
 
 def _level_label(mastery_level: float) -> str:
     if mastery_level < 0.2:
-        return "Level 0: 아직 모름"
+        return "초심자"
     if mastery_level < 0.4:
-        return "Level 1: 들어본 적 있음"
+        return "견습생"
     if mastery_level < 0.6:
-        return "Level 2: 정의는 알지만 설명이 약함"
+        return "숙련자"
     if mastery_level < 0.78:
-        return "Level 3: 예시와 함께 설명 가능"
-    if mastery_level < 0.9:
-        return "Level 4: 다른 개념과 연결 가능"
-    return "Level 5: 응용 문제 해결 가능"
+        return "탐구자"
+    return "현자"
 
 
 def _next_step(

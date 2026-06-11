@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { BrainCircuit, BookOpen, CalendarClock, LogOut, MessageSquareText, User } from 'lucide-react';
+import { BookOpen, LogOut, MessageSquareText, User } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import './Sidebar.css';
 
@@ -9,29 +9,21 @@ export const Sidebar = () => {
   return (
     <aside className="sidebar glass-panel">
       <div className="sidebar-header">
-        <BrainCircuit className="logo-icon text-gradient" size={32} />
-        <h2 className="text-gradient">Brain-Sync</h2>
+        <img alt="SYNAPTOR" className="brand-logo" src="/synaptor-mark.png" />
+        <h2>SYNAPTOR</h2>
       </div>
       <nav className="sidebar-nav">
-        <NavLink to="/" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
-          <BrainCircuit size={20} />
-          <span>학습 대시보드</span>
-        </NavLink>
         <NavLink to="/study" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <BookOpen size={20} />
-          <span>학습실</span>
+          <span>Study</span>
         </NavLink>
         <NavLink to="/chat" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <MessageSquareText size={20} />
-          <span>튜터 채팅</span>
-        </NavLink>
-        <NavLink to="/review" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
-          <CalendarClock size={20} />
-          <span>오늘 복습</span>
+          <span>AI Chat</span>
         </NavLink>
         <NavLink to="/profile" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
           <User size={20} />
-          <span>프로필</span>
+          <span>Profile</span>
         </NavLink>
       </nav>
       <div className="sidebar-footer">

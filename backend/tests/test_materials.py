@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal
 from app.main import create_app
-from app.models.learning import MaterialChunk
+from app.models.learning import Concept, MaterialChunk, Question
 from auth_helpers import auth_headers
 
 
@@ -79,3 +79,123 @@ def test_list_materials_returns_current_user_uploads() -> None:
         assert len(body["materials"]) >= 1
         assert body["materials"][0]["title"] == "review"
         assert "Spaced repetition" in body["materials"][0]["preview"]
+
+
+def test_start_material_study_prepares_first_question() -> None:
+    pdf_bytes = make_pdf_bytes(
+        "Active recall asks learners to retrieve an idea before reading the answer. "
+        "Hints should be gradual so learners still think first."
+    )
+
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("study-start.pdf", pdf_bytes, "application/pdf")},
+            headers=headers,
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+
+        response = client.post(f"/api/materials/{material_id}/study/start", headers=headers)
+
+        body = response.json()
+        assert response.status_code == 200
+        assert body["session_id"] > 0
+        assert body["material"]["id"] == material_id
+        assert body["concepts"]
+        assert body["concepts"][0]["concept"]["id"] > 0
+        assert body["concepts"][0]["question"]["question_text"]
+        assert body["concepts"][0]["hint_budget"] in {3, 4, 5}
+        assert body["concepts"][0]["tier_name"] in {"초심자", "견습생", "숙련자", "탐구자", "현자"}
+        assert body["source"] in {"heuristic", "gemini", "stored"}
+
+
+def test_start_material_study_reuses_existing_concepts_and_questions() -> None:
+    pdf_bytes = make_pdf_bytes(
+        "Self explanation reveals understanding gaps because learners must connect causes, "
+        "conditions, and results in their own words."
+    )
+
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("reuse-study.pdf", pdf_bytes, "application/pdf")},
+            headers=headers,
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+
+        first_response = client.post(f"/api/materials/{material_id}/study/start", headers=headers)
+        assert first_response.status_code == 200
+
+        with SessionLocal() as db:
+            concept_count = db.query(Concept).filter(Concept.material_id == material_id).count()
+            question_count = (
+                db.query(Question)
+                .join(Concept, Question.concept_id == Concept.id)
+                .filter(Concept.material_id == material_id)
+                .count()
+            )
+
+        second_response = client.post(f"/api/materials/{material_id}/study/start", headers=headers)
+        assert second_response.status_code == 200
+
+        with SessionLocal() as db:
+            assert db.query(Concept).filter(Concept.material_id == material_id).count() == concept_count
+            assert (
+                db.query(Question)
+                .join(Concept, Question.concept_id == Concept.id)
+                .filter(Concept.material_id == material_id)
+                .count()
+                == question_count
+            )
+
+
+def test_start_material_study_hides_other_users_materials() -> None:
+    pdf_bytes = make_pdf_bytes("Misconception checks compare the answer with material evidence.")
+
+    with TestClient(create_app()) as client:
+        owner_headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("private-study.pdf", pdf_bytes, "application/pdf")},
+            headers=owner_headers,
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+
+        other_headers = auth_headers(client)
+        response = client.post(f"/api/materials/{material_id}/study/start", headers=other_headers)
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "학습 자료를 찾을 수 없습니다."
+
+
+def test_start_material_study_merges_numbered_concept_parts() -> None:
+    pdf_bytes = make_pdf_bytes(
+        "Linear Least Squares Prediction Algorithms (1)\n"
+        "LSTD estimates value function weights from sampled transitions.\n"
+        "Linear Least Squares Prediction Algorithms (2)\n"
+        "LSTD uses a least-squares fixed point equation for prediction."
+    )
+
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        upload_response = client.post(
+            "/api/materials/upload",
+            files={"file": ("numbered-concepts.pdf", pdf_bytes, "application/pdf")},
+            headers=headers,
+        )
+        assert upload_response.status_code == 201
+        material_id = upload_response.json()["id"]
+
+        response = client.post(f"/api/materials/{material_id}/study/start", headers=headers)
+
+        body = response.json()
+        titles = [item["concept"]["title"] for item in body["concepts"]]
+        assert response.status_code == 200
+        assert "Linear Least Squares Prediction Algorithms" in titles
+        assert "Linear Least Squares Prediction Algorithms (1)" not in titles
+        assert "Linear Least Squares Prediction Algorithms (2)" not in titles

@@ -37,6 +37,8 @@ def build_session_report(session: LearningSession) -> SessionReportResponse:
             title=concept.title,
             mastery_level=mastery.mastery_level if mastery else None,
             learner_level_label=mastery.learner_level_label if mastery else None,
+            concept_score=mastery.concept_score if mastery else None,
+            tier_name=mastery.tier_name if mastery else None,
             next_difficulty=mastery.next_difficulty if mastery else None,
             next_question_type=mastery.next_question_type if mastery else None,
             next_review_at=mastery.next_review_at if mastery else None,
@@ -70,6 +72,10 @@ def build_session_report(session: LearningSession) -> SessionReportResponse:
         ended_at=session.ended_at,
         total_answers=total_answers,
         average_score=average_score,
+        material_score=_material_mastery_value(session, "material_score"),
+        material_tier=_material_mastery_value(session, "tier_name"),
+        material_completed_concepts=_material_mastery_value(session, "completed_concepts"),
+        material_total_concepts=_material_mastery_value(session, "total_concepts"),
         self_correct_count=self_correct_count,
         hinted_correct_count=hinted_correct_count,
         repeated_wrong_count=repeated_wrong_count,
@@ -94,6 +100,8 @@ def _concept_item(
     title: str,
     mastery_level: float | None,
     learner_level_label: str | None,
+    concept_score: float | None,
+    tier_name: str | None,
     next_difficulty: str | None,
     next_question_type: str | None,
     next_review_at,
@@ -104,11 +112,22 @@ def _concept_item(
         title=title,
         mastery_level=mastery_level,
         learner_level_label=learner_level_label,
+        concept_score=concept_score,
+        tier_name=tier_name,
         next_difficulty=next_difficulty,
         next_question_type=next_question_type,
         next_review_at=next_review_at,
         reason=reason,
     )
+
+
+def _material_mastery_value(session: LearningSession, field_name: str):
+    if session.user is None:
+        return None
+    for record in session.user.material_mastery_records:
+        if record.material_id == session.material_id:
+            return getattr(record, field_name)
+    return None
 
 
 def _is_self_correct(answer: UserAnswer) -> bool:

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, BrainCircuit, CalendarClock, Clock3, PlayCircle, RotateCcw } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Clock3, PlayCircle, RotateCcw, Sparkles } from 'lucide-react';
 import { getDailyReview } from '../api/client';
 import type { DailyReviewResponse } from '../types/api';
 import './DailyReview.css';
@@ -97,7 +97,7 @@ export function DailyReview() {
         {loading && <div className="glass-panel review-empty">오늘의 복습 일정을 계산하는 중입니다.</div>}
         {!loading && review?.review_items.length === 0 && (
           <div className="glass-panel review-empty">
-            <BrainCircuit size={46} className="text-gradient" style={{ opacity: 0.55 }} />
+            <Sparkles size={46} className="text-gradient" style={{ opacity: 0.55 }} />
             <strong>오늘 우선 복습할 취약 개념이 없습니다.</strong>
             <p>새 자료를 학습하거나 학습실에서 능동 회상 질문을 풀면 복습 일정이 생성됩니다.</p>
           </div>

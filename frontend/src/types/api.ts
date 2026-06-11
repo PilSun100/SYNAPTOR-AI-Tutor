@@ -159,6 +159,31 @@ export type QuestionGenerationResponse = {
   questions: Question[];
 };
 
+export type StudyStartResponse = {
+  session_id: number;
+  material: MaterialSummary;
+  concepts: StudyConceptItem[];
+  material_mastery: MaterialMasterySummary | null;
+  source: string;
+};
+
+export type StudyConceptItem = {
+  concept: Concept;
+  question: Question;
+  difficulty: string;
+  hint_budget: number;
+  concept_score: number;
+  tier_name: string;
+  completed: boolean;
+};
+
+export type MaterialMasterySummary = {
+  material_score: number;
+  tier_name: string;
+  completed_concepts: number;
+  total_concepts: number;
+};
+
 export type AdaptiveLearningState = {
   mastery_level: number;
   confidence_score: number;
@@ -199,6 +224,14 @@ export type AnswerEvaluationResponse = {
   misconception_detected: boolean;
   response_time: number | null;
   feedback: string;
+  hints_used: number;
+  hint_budget: number;
+  concept_score: number;
+  concept_tier: string;
+  material_score: number | null;
+  material_tier: string | null;
+  material_completed_concepts: number | null;
+  material_total_concepts: number | null;
   adaptive_state: AdaptiveLearningState;
   evidence: EvidenceSnippet[];
   source: string;
@@ -207,9 +240,15 @@ export type AnswerEvaluationResponse = {
 
 export type HintResponse = {
   id: number;
-  user_answer_id: number;
+  user_answer_id: number | null;
+  session_id: number | null;
+  question_id: number | null;
+  concept_id: number | null;
   hint_level: number;
+  hint_budget: number;
+  hints_used: number;
   hint_text: string;
+  stuck_reason: string | null;
   evidence: EvidenceSnippet[];
   source: string;
   created_at: string;

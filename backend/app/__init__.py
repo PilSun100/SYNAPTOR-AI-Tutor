@@ -1,1 +1,1 @@
-"""Brain-Sync AI Tutor backend package."""
+"""SYNAPTOR AI Tutor backend package."""

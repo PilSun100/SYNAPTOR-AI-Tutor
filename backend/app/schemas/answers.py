@@ -22,6 +22,14 @@ class AnswerEvaluationResponse(BaseModel):
     misconception_detected: bool
     response_time: float | None
     feedback: str
+    hints_used: int
+    hint_budget: int
+    concept_score: float
+    concept_tier: str
+    material_score: float | None = None
+    material_tier: str | None = None
+    material_completed_concepts: int | None = None
+    material_total_concepts: int | None = None
     adaptive_state: AdaptiveLearningStateResponse
     evidence: list[EvidenceSnippetResponse]
     source: str

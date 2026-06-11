@@ -1,5 +1,4 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { BrainCircuit } from 'lucide-react';
 import { useAuth } from './useAuth';
 
 export function ProtectedRoute() {
@@ -9,7 +8,7 @@ export function ProtectedRoute() {
   if (initializing) {
     return (
       <div className="auth-loading-screen">
-        <BrainCircuit size={32} className="text-gradient" />
+        <img alt="SYNAPTOR" className="loading-brand-mark" src="/synaptor-mark.png" />
         <span>학습 세션을 확인하는 중...</span>
       </div>
     );

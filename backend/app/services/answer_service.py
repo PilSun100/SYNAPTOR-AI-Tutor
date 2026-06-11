@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.models.learning import LearningSession, Question, User, UserAnswer
+from app.models.learning import HintLog, LearningSession, MaterialMastery, Question, User, UserAnswer
 from app.services.adaptive_learning_service import AdaptiveLearningState, build_adaptive_state, update_mastery_from_answer
 from app.services.llm_provider import LLMProvider
 from app.services.learning_profile_service import update_learning_profile
@@ -9,6 +9,12 @@ from app.services.retrieval_service import (
     format_evidence_context,
     log_evidence,
     retrieve_chunks_for_answer,
+)
+from app.services.tier_service import (
+    apply_concept_score,
+    concept_score,
+    hint_budget_for_difficulty,
+    update_material_mastery,
 )
 
 
@@ -20,7 +26,18 @@ def evaluate_and_store_answer(
     user: User,
     session_id: int | None = None,
     response_time: float | None = None,
-) -> tuple[str, UserAnswer, str, AdaptiveLearningState, list[RetrievedChunk]]:
+) -> tuple[
+    str,
+    UserAnswer,
+    str,
+    AdaptiveLearningState,
+    list[RetrievedChunk],
+    int,
+    int,
+    float,
+    str,
+    MaterialMastery | None,
+]:
     session = _resolve_session(db, question, user, session_id)
     evidence_chunks = retrieve_chunks_for_answer(db, question.id, answer_text)
     evaluation = provider.evaluate_answer(
@@ -42,6 +59,7 @@ def evaluate_and_store_answer(
 
     db.add(user_answer)
     db.flush()
+    hints_used = _attach_pre_answer_hints(db, user_answer)
     log_evidence(
         db,
         evidence_chunks,
@@ -49,13 +67,29 @@ def evaluate_and_store_answer(
         related_question_id=question.id,
         related_answer_id=user_answer.id,
     )
-    mastery = update_mastery_from_answer(db, user_answer)
+    mastery = update_mastery_from_answer(db, user_answer, hints_used=hints_used)
+    score = concept_score(user_answer, hints_used)
+    apply_concept_score(mastery, score)
     adaptive_state = build_adaptive_state(question.concept, mastery)
+    material_mastery = update_material_mastery(db, session)
     update_learning_profile(db, user.id)
     db.commit()
     db.refresh(user_answer)
+    if material_mastery is not None:
+        db.refresh(material_mastery)
 
-    return provider.source, user_answer, evaluation.feedback, adaptive_state, evidence_chunks
+    return (
+        provider.source,
+        user_answer,
+        evaluation.feedback,
+        adaptive_state,
+        evidence_chunks,
+        hints_used,
+        hint_budget_for_difficulty(question.concept.difficulty),
+        score,
+        mastery.tier_name,
+        material_mastery,
+    )
 
 
 def _resolve_session(
@@ -74,3 +108,18 @@ def _resolve_session(
     db.add(session)
     db.flush()
     return session
+
+
+def _attach_pre_answer_hints(db: Session, user_answer: UserAnswer) -> int:
+    hints = (
+        db.query(HintLog)
+        .filter(
+            HintLog.session_id == user_answer.session_id,
+            HintLog.question_id == user_answer.question_id,
+            HintLog.user_answer_id.is_(None),
+        )
+        .all()
+    )
+    for hint in hints:
+        hint.user_answer_id = user_answer.id
+    return len(hints)

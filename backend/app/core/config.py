@@ -9,13 +9,13 @@ PRODUCTION_ENVIRONMENTS = {"production", "prod"}
 
 
 class Settings(BaseSettings):
-    app_name: str = "Brain-Sync AI Tutor API"
+    app_name: str = "SYNAPTOR AI Tutor API"
     app_version: str = "0.1.0"
     environment: str = "development"
     gemini_api_key: str = ""
     embedding_model: str = "models/text-embedding-004"
     embedding_dimensions: int = 768
-    database_url: str = f"sqlite:///{PROJECT_ROOT / 'data' / 'brain_sync.db'}"
+    database_url: str = f"sqlite:///{PROJECT_ROOT / 'data' / 'synaptor.db'}"
     upload_dir: str = str(PROJECT_ROOT / "data" / "uploads")
     max_upload_mb: int = 20
     cors_origins: str = "http://localhost:5173"

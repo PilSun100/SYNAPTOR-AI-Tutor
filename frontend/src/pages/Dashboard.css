@@ -1,11 +1,11 @@
 .dashboard {
   flex: 1;
-  height: 100vh;
+  min-height: 100vh;
   overflow-y: auto;
-  padding: 32px;
+  padding: 36px 40px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
 }
 
 .dashboard-header {
@@ -16,7 +16,7 @@
 }
 
 .dashboard-header h1 {
-  font-size: 2.5rem;
+  font-size: 2.35rem;
   margin-bottom: 8px;
 }
 
@@ -30,6 +30,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .ghost-link {
@@ -39,7 +40,7 @@
   padding: 0 14px;
   color: var(--text-primary);
   text-decoration: none;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-surface);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -52,21 +53,21 @@
 }
 
 .dashboard-error {
-  border: 1px solid rgba(251, 191, 36, 0.35);
+  border: 1px solid rgba(217, 119, 6, 0.35);
   border-radius: 8px;
   padding: 12px 14px;
-  color: #fde68a;
-  background: rgba(251, 191, 36, 0.1);
+  color: #92400e;
+  background: var(--accent-soft);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
 .today-sync {
-  padding: 22px;
+  padding: 24px;
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
-  gap: 20px;
+  grid-template-columns: minmax(280px, 0.75fr) minmax(380px, 1.25fr);
+  gap: 18px;
   align-items: stretch;
 }
 
@@ -102,8 +103,8 @@
 .method-card {
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 16px;
-  background: rgba(20, 184, 166, 0.08);
+  padding: 18px;
+  background: var(--primary-soft);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -116,7 +117,7 @@
 }
 
 .review-focus-card {
-  background: rgba(96, 165, 250, 0.08);
+  background: var(--secondary-soft);
 }
 
 .method-card span,
@@ -150,7 +151,7 @@
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -186,7 +187,7 @@
 }
 
 .dashboard-panel {
-  padding: 20px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -206,7 +207,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-quiet);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -273,7 +274,7 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-quiet);
   display: flex;
   flex-direction: column;
   gap: 8px;

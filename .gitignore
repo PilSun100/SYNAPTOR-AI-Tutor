@@ -19,6 +19,7 @@ backend/**/*.pyc
 
 # Runtime data
 data/*.db
+data/*.db.*
 data/*.sqlite
 data/uploads/*
 !data/uploads/.gitkeep

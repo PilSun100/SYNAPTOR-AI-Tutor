@@ -1,6 +1,6 @@
-# Brain-Sync 백엔드
+# SYNAPTOR 백엔드
 
-Brain-Sync AI Tutor의 FastAPI 백엔드입니다. PDF 처리, RAG 근거 검색, AI 튜터링 로직, 사용자 인증, 학습 상태 저장, 개인화 추천 API를 담당합니다.
+SYNAPTOR AI Tutor의 FastAPI 백엔드입니다. PDF 처리, RAG 근거 검색, AI 튜터링 로직, 사용자 인증, 학습 상태 저장, 개인화 추천 API를 담당합니다.
 
 전체 서비스 아키텍처와 시연 흐름은 루트 [README.md](../README.md)를 참고하세요.
 
@@ -71,7 +71,7 @@ pip install -r requirements.txt
 루트 `.env` 또는 백엔드 실행 환경에 다음 값을 설정합니다.
 
 ```env
-DATABASE_URL=sqlite:///./data/brain_sync.db
+DATABASE_URL=sqlite:///./data/synaptor.db
 AUTO_CREATE_TABLES=true
 JWT_SECRET_KEY=change-this-secret
 ACCESS_TOKEN_EXPIRE_MINUTES=30

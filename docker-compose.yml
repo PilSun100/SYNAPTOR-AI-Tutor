@@ -3,15 +3,15 @@ services:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
-      POSTGRES_DB: brain_sync
-      POSTGRES_USER: brain_sync
-      POSTGRES_PASSWORD: brain_sync_password
+      POSTGRES_DB: synaptor
+      POSTGRES_USER: synaptor
+      POSTGRES_PASSWORD: synaptor_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U brain_sync -d brain_sync"]
+      test: ["CMD-SHELL", "pg_isready -U synaptor -d synaptor"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -23,7 +23,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql+psycopg://brain_sync:brain_sync_password@postgres:5432/brain_sync
+      DATABASE_URL: postgresql+psycopg://synaptor:synaptor_password@postgres:5432/synaptor
       UPLOAD_DIR: /app/data/uploads
       AUTO_CREATE_TABLES: "false"
     ports:

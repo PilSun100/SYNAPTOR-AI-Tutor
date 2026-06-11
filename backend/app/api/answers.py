@@ -36,7 +36,18 @@ def submit_answer(
     provider = get_llm_provider()
 
     try:
-        source, user_answer, feedback, adaptive_state, evidence_chunks = evaluate_and_store_answer(
+        (
+            source,
+            user_answer,
+            feedback,
+            adaptive_state,
+            evidence_chunks,
+            hints_used,
+            hint_budget,
+            concept_score,
+            concept_tier,
+            material_mastery,
+        ) = evaluate_and_store_answer(
             db=db,
             question=question,
             answer_text=payload.answer_text,
@@ -61,6 +72,14 @@ def submit_answer(
         misconception_detected=user_answer.misconception_detected,
         response_time=user_answer.response_time,
         feedback=feedback,
+        hints_used=hints_used,
+        hint_budget=hint_budget,
+        concept_score=concept_score,
+        concept_tier=concept_tier,
+        material_score=material_mastery.material_score if material_mastery else None,
+        material_tier=material_mastery.tier_name if material_mastery else None,
+        material_completed_concepts=material_mastery.completed_concepts if material_mastery else None,
+        material_total_concepts=material_mastery.total_concepts if material_mastery else None,
         adaptive_state=asdict(adaptive_state),
         evidence=evidence_snippets(evidence_chunks),
         source=source,

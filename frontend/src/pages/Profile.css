@@ -1,0 +1,125 @@
+.profile-page {
+  flex: 1;
+  min-height: 100vh;
+  overflow-y: auto;
+  padding: 34px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.profile-header h1 {
+  margin-bottom: 8px;
+  font-size: 2.25rem;
+}
+
+.profile-pill {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.profile-error {
+  border: 1px solid rgba(185, 28, 28, 0.26);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.profile-metric {
+  min-height: 230px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.metric-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.metric-heading svg {
+  color: var(--primary);
+}
+
+.metric-heading h2 {
+  font-size: 1rem;
+}
+
+.profile-metric strong {
+  color: var(--primary-strong);
+  font-size: 2.2rem;
+}
+
+.profile-metric p,
+.profile-note p {
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.profile-metric span {
+  margin-top: auto;
+  border-radius: 999px;
+  background: var(--bg-quiet);
+  color: var(--text-primary);
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.profile-note {
+  max-width: 760px;
+  padding: 20px;
+}
+
+.profile-note h2 {
+  margin-bottom: 8px;
+  font-size: 1.15rem;
+}
+
+@media (max-width: 1180px) {
+  .profile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .profile-page {
+    padding: 22px;
+  }
+
+  .profile-header {
+    flex-direction: column;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}

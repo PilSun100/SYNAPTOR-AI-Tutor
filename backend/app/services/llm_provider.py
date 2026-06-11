@@ -204,6 +204,124 @@ class GeminiProvider:
         return _parse_tutor_chat(response.text or "")
 
 
+class FallbackLLMProvider:
+    source = "gemini+heuristic"
+
+    def __init__(self, primary: LLMProvider, fallback: LLMProvider) -> None:
+        self.primary = primary
+        self.fallback = fallback
+
+    def extract_concepts(self, text: str) -> list[ExtractedConcept]:
+        try:
+            return self.primary.extract_concepts(text)
+        except Exception:
+            return self.fallback.extract_concepts(text)
+
+    def generate_questions(
+        self,
+        concept_title: str,
+        concept_description: str,
+        material_text: str,
+        evidence_context: str = "",
+    ) -> list[GeneratedQuestion]:
+        try:
+            return self.primary.generate_questions(
+                concept_title,
+                concept_description,
+                material_text,
+                evidence_context,
+            )
+        except Exception:
+            return self.fallback.generate_questions(
+                concept_title,
+                concept_description,
+                material_text,
+                evidence_context,
+            )
+
+    def evaluate_answer(
+        self,
+        question_text: str,
+        expected_answer: str,
+        answer_text: str,
+        evidence_context: str = "",
+    ) -> EvaluatedAnswer:
+        try:
+            return self.primary.evaluate_answer(
+                question_text,
+                expected_answer,
+                answer_text,
+                evidence_context,
+            )
+        except Exception:
+            return self.fallback.evaluate_answer(
+                question_text,
+                expected_answer,
+                answer_text,
+                evidence_context,
+            )
+
+    def generate_hint(
+        self,
+        question_text: str,
+        expected_answer: str,
+        answer_text: str,
+        missing_points: str,
+        hint_level: int,
+        evidence_context: str = "",
+    ) -> GeneratedHint:
+        try:
+            return self.primary.generate_hint(
+                question_text,
+                expected_answer,
+                answer_text,
+                missing_points,
+                hint_level,
+                evidence_context,
+            )
+        except Exception:
+            return self.fallback.generate_hint(
+                question_text,
+                expected_answer,
+                answer_text,
+                missing_points,
+                hint_level,
+                evidence_context,
+            )
+
+    def evaluate_self_explanation(
+        self,
+        concept_title: str,
+        concept_description: str,
+        explanation_text: str,
+        evidence_context: str = "",
+    ) -> EvaluatedSelfExplanation:
+        try:
+            return self.primary.evaluate_self_explanation(
+                concept_title,
+                concept_description,
+                explanation_text,
+                evidence_context,
+            )
+        except Exception:
+            return self.fallback.evaluate_self_explanation(
+                concept_title,
+                concept_description,
+                explanation_text,
+                evidence_context,
+            )
+
+    def generate_tutor_chat(
+        self,
+        user_message: str,
+        evidence_context: str,
+    ) -> GeneratedTutorChat:
+        try:
+            return self.primary.generate_tutor_chat(user_message, evidence_context)
+        except Exception:
+            return self.fallback.generate_tutor_chat(user_message, evidence_context)
+
+
 class HeuristicProvider:
     source = "heuristic"
 
@@ -387,7 +505,7 @@ class HeuristicProvider:
 
 def get_llm_provider() -> LLMProvider:
     if settings.gemini_api_key:
-        return GeminiProvider()
+        return FallbackLLMProvider(GeminiProvider(), HeuristicProvider())
     return HeuristicProvider()
 
 
@@ -401,6 +519,8 @@ def _build_concept_prompt(text: str) -> str:
 - 강의 제목, 과목명, 학기, 연도, 페이지 번호, 목차, 발표용 장식 문구는 제외하세요.
 - "Introduction to ...", "1st semester", "Mobile System Engineering"처럼 문서 메타데이터에 가까운 항목은 개념으로 만들지 마세요.
 - 슬라이드 제목이라도 실제 학습 개념이면 구체적인 개념명으로 정리하세요. 예: "TD exploits Markov property" -> "TD와 Markov property"
+- 같은 개념이 "(1)", "(2)", "Part 1", "Part 2"처럼 여러 슬라이드로 나뉘면 하나의 개념으로 합치세요.
+- 합친 개념이 너무 넓으면 번호를 붙이지 말고 하위 주제가 드러나도록 구체적인 개념명으로 세분화하세요.
 
 반드시 JSON 배열만 반환하세요. Markdown 코드블록은 쓰지 마세요.
 각 항목은 다음 필드를 가져야 합니다.
@@ -437,6 +557,7 @@ def _build_question_prompt(
 - 개념 이해, 적용, 오개념 탐지를 섞으세요.
 - 아래 제공된 근거 chunk만 사용하세요.
 - 근거 chunk로 확인할 수 없는 사실은 만들지 마세요.
+- 개념명이 "(1)", "(2)"처럼 번호로만 나뉘어 있으면 번호를 질문에 노출하지 말고 하나의 통합 개념으로 묻거나, 근거에 나온 하위 주제를 명시해 구체적으로 물으세요.
 
 개념명:
 {concept_title}
@@ -502,17 +623,18 @@ def _build_hint_prompt(
 사용자가 스스로 정답에 도달하도록 힌트를 제공하세요.
 
 힌트 레벨:
-1 = 방향 힌트
-2 = 관련 개념 힌트
-3 = 구조 힌트
-4 = 핵심 키워드 힌트
-5 = 거의 정답에 가까운 힌트
+1 = 아주 작은 방향 힌트. 정답 키워드를 직접 말하지 말고 무엇을 떠올릴지만 안내
+2 = 관련 개념 힌트. 자료 안의 관련 개념이나 조건을 짧게 제시
+3 = 구조 힌트. 답변을 어떤 순서로 구성할지 문장 틀 제공
+4 = 강한 발판. 핵심 키워드나 비교 기준 일부 제공
+5 = 결정적 힌트. 정답 문장 전체는 피하되 거의 도달할 수 있는 설명 구조 제공
 
 규칙:
 - 정답 문장을 그대로 말하지 마세요.
 - 답을 설명하지 말고 다음 사고 행동을 유도하세요.
 - 한국어 한두 문장으로 작성하세요.
 - 현재 레벨보다 더 강한 힌트를 제공하지 마세요.
+- 레벨 1은 반드시 살짝만 도와주고, 레벨이 올라갈수록 더 구체적인 단서를 주세요.
 - 제공된 근거 chunk만 사용하고, 근거 밖의 정보를 만들지 마세요.
 
 질문:
@@ -573,7 +695,7 @@ def _build_self_explanation_prompt(
 
 def _build_tutor_chat_prompt(user_message: str, evidence_context: str) -> str:
     return f"""
-당신은 Brain-Sync의 뇌과학 기반 개인화 AI 튜터입니다.
+당신은 SYNAPTOR의 뇌과학 기반 개인화 AI 튜터입니다.
 사용자 질문에 답하되, 일반 챗봇처럼 장황하게 설명하지 말고 업로드 자료 근거를 바탕으로 학습 행동을 설계하세요.
 
 반드시 JSON 객체만 반환하세요. Markdown 코드블록은 쓰지 마세요.
@@ -836,6 +958,7 @@ def _make_title(chunk: str) -> str:
     if not words:
         return "핵심 개념"
     title = " ".join(words[:6])
+    title = re.sub(r"\s*\(\d+\)\s*$", "", title).strip()
     title = re.sub(r"\bMobile System Engineering\b", "", title, flags=re.IGNORECASE).strip()
     return title[:80] or "핵심 개념"
 
@@ -928,6 +1051,15 @@ def _line_score(text: str) -> int:
         "backward": 2,
         "prediction": 2,
         "value": 2,
+        "persistent": 3,
+        "volume": 3,
+        "storage": 2,
+        "pod": 2,
+        "pvc": 3,
+        "볼륨": 3,
+        "스토리지": 2,
+        "클러스터": 2,
+        "생명 주기": 2,
     }
     for pattern, weight in technical_patterns.items():
         if pattern in normalized:

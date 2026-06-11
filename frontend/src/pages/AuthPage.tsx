@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { BrainCircuit, LockKeyhole, Mail, UserPlus } from 'lucide-react';
+import { LockKeyhole, Mail, UserPlus } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import './AuthPage.css';
 
@@ -53,14 +53,14 @@ export function AuthPage() {
     <main className="auth-page">
       <section className="auth-product-panel">
         <div className="auth-brand">
-          <BrainCircuit size={36} className="text-gradient" />
-          <span>Brain-Sync</span>
+          <img alt="SYNAPTOR" src="/synaptor-mark.png" />
+          <span>SYNAPTOR</span>
         </div>
         <div>
           <h1>개인 자료와 학습 기록을 분리해 추적하는 AI 튜터</h1>
           <p>
             로그인 후 업로드한 PDF, 답변 평가, 힌트 사용량, 복습 시점이 사용자별로 저장됩니다.
-            Brain-Sync는 같은 자료라도 사용자의 이해 상태에 맞춰 질문과 설명 난이도를 조정합니다.
+            SYNAPTOR는 같은 자료라도 사용자의 이해 상태에 맞춰 질문과 설명 난이도를 조정합니다.
           </p>
         </div>
         <div className="auth-feature-grid">

@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
-  BrainCircuit,
   CalendarClock,
   Gauge,
   Lightbulb,
+  MessageSquareText,
   PlayCircle,
   RefreshCcw,
   ShieldAlert,
+  Sparkles,
   Target,
 } from 'lucide-react';
 import { getDashboardSummary } from '../api/client';
@@ -85,12 +86,16 @@ export const Dashboard = () => {
       <header className="dashboard-header">
         <div>
           <h1>오늘의 학습 경로, <span className="text-gradient">{user?.display_name ?? 'Learner'}</span></h1>
-          <p className="subtitle">Brain-Sync가 회상 점수, 오개념, 망각 위험을 합쳐 오늘의 학습 경로를 계산합니다.</p>
+          <p className="subtitle">SYNAPTOR가 회상 점수, 오개념, 망각 위험을 합쳐 오늘의 학습 경로를 계산합니다.</p>
         </div>
         <div className="dashboard-actions">
           <Link className="ghost-link" to="/review">
             <CalendarClock size={18} />
             오늘 복습
+          </Link>
+          <Link className="ghost-link" to="/chat">
+            <MessageSquareText size={18} />
+            튜터 채팅
           </Link>
           <Link className="glow-btn dashboard-start-link" to="/study">
             <PlayCircle size={20} />
@@ -108,7 +113,7 @@ export const Dashboard = () => {
 
       <section className="today-sync glass-panel">
         <div className="section-heading">
-          <BrainCircuit size={22} />
+          <Sparkles size={22} />
           <div>
             <h2>오늘의 추천 학습</h2>
             <p>{loading ? '개인화 학습 경로를 계산하는 중입니다.' : profile?.recommendation_reason}</p>
@@ -183,7 +188,7 @@ export const Dashboard = () => {
           <div className="weak-list">
             {profile?.weak_concepts.length === 0 && (
               <div className="empty-state">
-                <BrainCircuit size={40} className="text-gradient" style={{ opacity: 0.5 }} />
+                <Sparkles size={40} className="text-gradient" style={{ opacity: 0.5 }} />
                 <p>아직 취약 개념 데이터가 없습니다. 학습실에서 첫 세션을 시작하세요.</p>
               </div>
             )}
@@ -253,7 +258,7 @@ export const Dashboard = () => {
           <div className="section-heading compact">
             <CalendarClock size={20} />
             <div>
-              <h2>Review Schedule</h2>
+              <h2>복습 일정</h2>
               <p>망각 위험과 다음 복습 시점을 기준으로 정렬됩니다.</p>
             </div>
           </div>
@@ -276,7 +281,7 @@ export const Dashboard = () => {
         <div className="section-heading compact">
           <Target size={20} />
           <div>
-            <h2>Recent Sessions</h2>
+            <h2>최근 학습 세션</h2>
             <p>최근 세션의 답변 품질과 오개념 발생을 추적합니다.</p>
           </div>
         </div>
