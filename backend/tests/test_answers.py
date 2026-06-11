@@ -1,4 +1,5 @@
 import fitz
+import pytest
 from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal
@@ -152,3 +153,22 @@ def test_submit_answer_links_pre_answer_hints_into_score() -> None:
         assert 0 <= body["concept_score"] <= 100
         assert body["material_completed_concepts"] >= 1
         assert body["material_total_concepts"] >= body["material_completed_concepts"]
+
+
+@pytest.mark.parametrize("answer_text", ["asdf", "ㅋㅋㅋㅋㅋㅋ", "몰라", "a", "test"])
+def test_submit_answer_scores_low_information_answers_as_zero(answer_text: str) -> None:
+    with TestClient(create_app()) as client:
+        headers = auth_headers(client)
+        question_id = create_question(client, headers)
+
+        response = client.post(
+            f"/api/questions/{question_id}/answer",
+            json={"answer_text": answer_text},
+            headers=headers,
+        )
+
+        body = response.json()
+        assert response.status_code == 201
+        assert body["correctness_score"] == 0
+        assert body["concept_score"] == 0
+        assert "의미 있는 개념 설명" in body["feedback"]

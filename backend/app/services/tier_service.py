@@ -1,3 +1,5 @@
+import re
+
 from sqlalchemy.orm import Session
 
 from app.models.learning import Concept, ConceptMastery, LearningSession, MaterialMastery, UserAnswer, utc_now
@@ -31,10 +33,38 @@ def tier_for_score(score: float) -> str:
 
 
 def concept_score(answer: UserAnswer, hints_used: int) -> float:
+    if is_low_information_answer(answer.answer_text) or answer.correctness_score < 0.1:
+        return 0.0
+
     hint_budget = hint_budget_for_difficulty(answer.question.concept.difficulty)
     hint_efficiency = max(0.0, 1.0 - (hints_used / max(hint_budget, 1)))
-    score = (answer.correctness_score * 65) + (hint_efficiency * 25) + 10
-    return round(max(0.0, min(100.0, score)), 1)
+    score = answer.correctness_score * (70 + hint_efficiency * 30)
+    return round(max(0.0, min(100.0, score)), 2)
+
+
+def is_low_information_answer(answer_text: str | None) -> bool:
+    normalized = re.sub(r"\s+", "", answer_text or "").lower()
+    if not normalized:
+        return True
+
+    meaningful_chars = re.findall(r"[a-z0-9가-힣]", normalized)
+    if len(meaningful_chars) < 4:
+        return True
+
+    compact = "".join(meaningful_chars)
+    if compact in {"asdf", "test", "idk", "dontknow", "unknown", "none", "몰라", "모름", "모르겠음"}:
+        return True
+    if re.fullmatch(r"(.)\1{3,}", compact):
+        return True
+    if re.fullmatch(r"(.{2,4})\1{1,}", compact):
+        return True
+
+    tokens = re.findall(r"[a-z][a-z0-9-]*|[가-힣]{2,}", answer_text or "", flags=re.I)
+    unique_tokens = {token.lower() for token in tokens}
+    if len(tokens) >= 3 and len(unique_tokens) == 1:
+        return True
+
+    return False
 
 
 def apply_concept_score(mastery: ConceptMastery, score: float) -> ConceptMastery:

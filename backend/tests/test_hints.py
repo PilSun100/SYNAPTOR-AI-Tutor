@@ -1,9 +1,11 @@
+import re
+
 import fitz
 from fastapi.testclient import TestClient
 
 from app.db.session import SessionLocal
 from app.main import create_app
-from app.models.learning import EvidenceLog
+from app.models.learning import EvidenceLog, Question
 from auth_helpers import auth_headers
 
 
@@ -100,7 +102,13 @@ def create_persistent_volume_question(client: TestClient, headers: dict[str, str
     study_response = client.post(f"/api/materials/{material_id}/study/start", headers=headers)
     assert study_response.status_code == 200
     body = study_response.json()
-    return int(body["session_id"]), int(body["concepts"][0]["question"]["id"])
+    question_id = int(body["concepts"][0]["question"]["id"])
+    with SessionLocal() as db:
+        question = db.get(Question, question_id)
+        assert question is not None
+        question.concept.difficulty = "hard"
+        db.commit()
+    return int(body["session_id"]), question_id
 
 
 def test_request_hint_for_answer() -> None:
@@ -224,12 +232,37 @@ def test_pre_answer_hints_use_material_points_progressively() -> None:
             json={"session_id": session_id, "hint_level": 3},
             headers=headers,
         )
+        fourth = client.post(
+            f"/api/questions/{question_id}/hint",
+            json={"session_id": session_id, "hint_level": 4},
+            headers=headers,
+        )
+        fifth = client.post(
+            f"/api/questions/{question_id}/hint",
+            json={"session_id": session_id, "hint_level": 5},
+            headers=headers,
+        )
 
         assert first.status_code == 201
         assert second.status_code == 201
         assert third.status_code == 201
-        assert "3가지" in first.json()["hint_text"]
-        assert "OOOO" in second.json()["hint_text"]
-        assert "Cluster" in second.json()["hint_text"] or "Pod" in second.json()["hint_text"]
-        assert "ㅅ" in third.json()["hint_text"] or "V_" in third.json()["hint_text"]
-        assert third.json()["source"] == "rag"
+        assert fourth.status_code == 201
+        assert fifth.status_code == 201
+
+        hints = [
+            first.json()["hint_text"],
+            second.json()["hint_text"],
+            third.json()["hint_text"],
+            fourth.json()["hint_text"],
+            fifth.json()["hint_text"],
+        ]
+        joined = "\n".join(hints)
+        assert "스스로 질문" in hints[0]
+        assert "자료 근거 힌트" in hints[1]
+        assert "Cluster" in hints[1] or "Pod" in hints[1]
+        assert "문장 틀 힌트" in hints[2]
+        assert "핵심 키워드 힌트" in hints[3]
+        assert "거의 마지막 힌트" in hints[4]
+        assert "OOOO" not in joined
+        assert not re.search(r"[A-Za-z가-힣]_{2,}", joined)
+        assert fifth.json()["source"] == "rag"

@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models.learning import HintLog, LearningSession, MaterialMastery, Question, User, UserAnswer
 from app.services.adaptive_learning_service import AdaptiveLearningState, build_adaptive_state, update_mastery_from_answer
-from app.services.llm_provider import LLMProvider
+from app.services.llm_provider import EvaluatedAnswer, LLMProvider
 from app.services.learning_profile_service import update_learning_profile
 from app.services.retrieval_service import (
     RetrievedChunk,
@@ -14,6 +14,7 @@ from app.services.tier_service import (
     apply_concept_score,
     concept_score,
     hint_budget_for_difficulty,
+    is_low_information_answer,
     update_material_mastery,
 )
 
@@ -40,12 +41,24 @@ def evaluate_and_store_answer(
 ]:
     session = _resolve_session(db, question, user, session_id)
     evidence_chunks = retrieve_chunks_for_answer(db, question.id, answer_text)
-    evaluation = provider.evaluate_answer(
-        question_text=question.question_text,
-        expected_answer=question.expected_answer,
-        answer_text=answer_text,
-        evidence_context=format_evidence_context(evidence_chunks),
-    )
+    if is_low_information_answer(answer_text):
+        evaluation = EvaluatedAnswer(
+            correctness_score=0.0,
+            missing_points="의미 있는 개념 설명이 필요합니다.",
+            misconception_detected=True,
+            feedback=(
+                "의미 있는 개념 설명이 필요합니다. "
+                "아직 평가할 만한 학습 답변이 충분하지 않습니다. "
+                "자료 근거를 떠올려 핵심 개념, 관계, 이유를 한두 문장으로 설명해보세요."
+            ),
+        )
+    else:
+        evaluation = provider.evaluate_answer(
+            question_text=question.question_text,
+            expected_answer=question.expected_answer,
+            answer_text=answer_text,
+            evidence_context=format_evidence_context(evidence_chunks),
+        )
 
     user_answer = UserAnswer(
         session_id=session.id,
