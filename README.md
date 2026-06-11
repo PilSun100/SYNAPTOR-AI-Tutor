@@ -1,6 +1,6 @@
 <img width="1672" height="941" alt="ChatGPT Image 2026년 6월 11일 오후 09_09_52" src="https://github.com/user-attachments/assets/ab117c9f-7cbf-4b70-915c-8bbe8da3fc37" />
 
-<h1 align="center">SYNAPTOR AI Tutor</h1>
+# SYNAPTOR AI Tutor
 
 SYNAPTOR는 사용자가 업로드한 강의자료를 바탕으로 개념을 정리하고, 사용자가 직접 설명하도록 유도하는 자료 기반 AI 튜터입니다.
 
