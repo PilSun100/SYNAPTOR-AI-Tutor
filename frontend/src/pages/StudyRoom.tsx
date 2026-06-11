@@ -177,7 +177,14 @@ export const StudyRoom = () => {
         return;
       }
 
-      await deleteMaterial(item.id);
+      try {
+        await deleteMaterial(item.id);
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : '';
+        if (!message.includes('학습 자료를 찾을 수 없습니다')) {
+          throw caught;
+        }
+      }
       setMaterials((current) => current.filter((materialItem) => materialItem.id !== item.id));
       if (material?.id === item.id) {
         resetStudy();

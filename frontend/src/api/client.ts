@@ -41,7 +41,16 @@ export function clearAuthTokens(): void {
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, withAuthHeader(init));
   const contentType = response.headers.get('content-type') ?? '';
-  const body = contentType.includes('application/json') ? await response.json() : null;
+  const rawBody = response.status === 204 ? '' : await response.text();
+  let body: unknown = null;
+
+  if (rawBody && contentType.includes('application/json')) {
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      body = null;
+    }
+  }
 
   if (response.status === 401 && retry && getStoredRefreshToken()) {
     try {
@@ -53,7 +62,9 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   }
 
   if (!response.ok) {
-    const detail = body?.detail ?? 'API 요청에 실패했습니다.';
+    const detail = typeof body === 'object' && body !== null && 'detail' in body
+      ? body.detail
+      : 'API 요청에 실패했습니다.';
     throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
   }
 
