@@ -7,11 +7,13 @@ import {
   FileUp,
   HelpCircle,
   Loader2,
-  MessageSquareText,
   Send,
   Sparkles,
+  Trash2,
+  X,
 } from 'lucide-react';
 import {
+  deleteMaterial,
   getMaterials,
   requestQuestionHint,
   startMaterialStudy,
@@ -40,13 +42,6 @@ const tierDescriptions: Record<string, string> = {
   탐구자: '개념 간 관계를 연결하고 비교할 수 있습니다.',
   현자: '힌트 없이 깊이 있게 설명할 수 있습니다.',
 };
-
-const stuckOptions = [
-  { label: '단어가 기억나지 않아요', reason: 'forgot_word' },
-  { label: '개념은 아는데 설명이 안 돼요', reason: 'cannot_explain' },
-  { label: '질문이 이해되지 않아요', reason: 'question_unclear' },
-  { label: '두 개념이 헷갈려요', reason: 'confusing_concepts' },
-];
 
 const formatPercent = (value: number) => `${Math.round(value)}점`;
 
@@ -139,6 +134,19 @@ export const StudyRoom = () => {
     setAnswerStartedAt(Date.now());
   };
 
+  const resetStudy = () => {
+    setMaterial(null);
+    setSessionId(null);
+    setStudyItems([]);
+    setActiveIndex(0);
+    setAnswerText('');
+    setAnswerStartedAt(null);
+    setAnswersByQuestion({});
+    setHintsByQuestion({});
+    setMaterialMastery(null);
+    setError('');
+  };
+
   const handleUploadAndStart = () =>
     runAction('자료 분석 중', async () => {
       if (!file) {
@@ -162,8 +170,29 @@ export const StudyRoom = () => {
       await beginStudy(materialId);
     });
 
-  const handleRequestHint = (stuckReason?: string) =>
-    runAction(stuckReason ? '막힌 지점 분석 중' : '힌트 생성 중', async () => {
+  const handleDeleteMaterial = (item: MaterialSummary) =>
+    runAction('자료 삭제 중', async () => {
+      const confirmed = window.confirm(`'${item.title}' 자료를 삭제할까요? 학습 기록과 힌트 기록도 함께 삭제됩니다.`);
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await deleteMaterial(item.id);
+      } catch (caught) {
+        const message = caught instanceof Error ? caught.message : '';
+        if (!message.includes('학습 자료를 찾을 수 없습니다')) {
+          throw caught;
+        }
+      }
+      setMaterials((current) => current.filter((materialItem) => materialItem.id !== item.id));
+      if (material?.id === item.id) {
+        resetStudy();
+      }
+    });
+
+  const handleRequestHint = () =>
+    runAction('힌트 생성 중', async () => {
       if (!activeQuestion || !sessionId || !activeItem) {
         throw new Error('먼저 학습할 개념을 준비하세요.');
       }
@@ -172,7 +201,6 @@ export const StudyRoom = () => {
         activeQuestion.id,
         sessionId,
         activeHints.length + 1,
-        stuckReason,
       );
       setHintsByQuestion((current) => ({
         ...current,
@@ -285,6 +313,19 @@ export const StudyRoom = () => {
           </div>
         </div>
 
+        {(activeItem || sessionComplete) && (
+          <div className="study-session-actions">
+            <button className="secondary-btn" disabled={Boolean(loadingLabel)} onClick={resetStudy} type="button">
+              <FileText size={18} />
+              다른 자료 선택
+            </button>
+            <button className="secondary-btn quiet-danger" disabled={Boolean(loadingLabel)} onClick={resetStudy} type="button">
+              <X size={18} />
+              학습 종료
+            </button>
+          </div>
+        )}
+
         {!activeItem && (
           <div className="study-start-grid">
             <section className="study-start-panel">
@@ -314,17 +355,27 @@ export const StudyRoom = () => {
               <div className="material-list">
                 {materials.length === 0 && <p className="muted">아직 업로드한 자료가 없습니다.</p>}
                 {materials.map((item) => (
-                  <button
-                    className="material-item"
-                    disabled={Boolean(loadingLabel)}
-                    key={item.id}
-                    onClick={() => handleStartExisting(item.id)}
-                    type="button"
-                  >
-                    <strong>{item.title}</strong>
-                    <span>{item.extracted_text_length.toLocaleString()}자</span>
-                    <p>{item.preview || '미리보기가 없습니다.'}</p>
-                  </button>
+                  <article className="material-item" key={item.id}>
+                    <button
+                      className="material-start-button"
+                      disabled={Boolean(loadingLabel)}
+                      onClick={() => handleStartExisting(item.id)}
+                      type="button"
+                    >
+                      <strong>{item.title}</strong>
+                      <span>{item.extracted_text_length.toLocaleString()}자</span>
+                      <p>{item.preview || '미리보기가 없습니다.'}</p>
+                    </button>
+                    <button
+                      aria-label={`${item.title} 삭제`}
+                      className="material-delete-button"
+                      disabled={Boolean(loadingLabel)}
+                      onClick={() => handleDeleteMaterial(item)}
+                      type="button"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </article>
                 ))}
               </div>
             </section>
@@ -393,28 +444,6 @@ export const StudyRoom = () => {
                   </button>
                 </div>
               </section>
-
-              {!activeAnswer && (
-                <section className="stuck-panel">
-                  <div className="panel-title">
-                    <MessageSquareText size={19} />
-                    <h2>막혔나요?</h2>
-                  </div>
-                  <div className="stuck-grid">
-                    {stuckOptions.map((option) => (
-                      <button
-                        className="stuck-option"
-                        disabled={!canUseHint || Boolean(loadingLabel)}
-                        key={option.reason}
-                        onClick={() => handleRequestHint(option.reason)}
-                        type="button"
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
 
               {activeHints.length > 0 && (
                 <section className="support-list">

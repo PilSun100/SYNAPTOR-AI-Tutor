@@ -1,6 +1,6 @@
 # SYNAPTOR 백엔드
 
-SYNAPTOR AI Tutor의 FastAPI 백엔드입니다. PDF 처리, RAG 근거 검색, AI 튜터링 로직, 사용자 인증, 학습 상태 저장, 개인화 추천 API를 담당합니다.
+SYNAPTOR AI Tutor의 FastAPI 백엔드입니다. PDF 처리, RAG 근거 검색, AI 튜터링 로직, 사용자 인증, 학습 상태 저장, 자료 삭제, Study Room 시작 API, AI Chat API를 담당합니다.
 
 전체 서비스 아키텍처와 시연 흐름은 루트 [README.md](../README.md)를 참고하세요.
 
@@ -11,11 +11,12 @@ SYNAPTOR AI Tutor의 FastAPI 백엔드입니다. PDF 처리, RAG 근거 검색, 
 1. 사용자가 업로드한 PDF를 검증하고 텍스트를 추출합니다.
 2. 추출된 텍스트를 페이지 단위 chunk로 저장합니다.
 3. 텍스트 chunk와 이미지/도표 설명 chunk를 함께 저장해 멀티모달 RAG 근거로 사용합니다.
-4. 개념 추출, 질문 생성, 답변 평가, 힌트 생성, 자기 설명 평가, 튜터 채팅에 필요한 근거 chunk를 검색합니다.
-5. Gemini API 또는 로컬 fallback provider를 통해 튜터링 응답을 생성합니다.
-6. 답변 점수, 오개념, 힌트 사용량, 자기 설명 품질을 저장합니다.
-7. 개념별 숙련도와 다음 복습 시점을 갱신합니다.
-8. 사용자 학습 프로필, 일일 복습, 개인화 대시보드 데이터를 제공합니다.
+4. Study Room 시작 시 개념과 질문을 자동 준비하고 기존 기록은 재사용합니다.
+5. 개념 추출, 질문 생성, 답변 평가, 힌트 생성, 자기 설명 평가, 튜터 채팅에 필요한 근거 chunk를 검색합니다.
+6. Gemini API 또는 로컬 fallback provider를 통해 튜터링 응답을 생성합니다.
+7. 답변 점수, 오개념, 힌트 사용량, 자기 설명 품질을 저장합니다.
+8. 개념별 숙련도와 자료 티어를 갱신합니다.
+9. 사용자 학습 프로필, 일일 복습, 개인화 대시보드 데이터를 제공합니다.
 
 ## 핵심 기능
 
@@ -31,6 +32,7 @@ SYNAPTOR AI Tutor의 FastAPI 백엔드입니다. PDF 처리, RAG 근거 검색, 
   - page-aware material chunk 저장
   - 이미지/도표 페이지 감지
   - Gemini Vision 기반 image description chunk 저장
+  - 자료 삭제 시 관련 chunk, 개념, 질문, 세션, 힌트, evidence, 자료 점수 기록 정리
 
 - **RAG 검색**
   - lexical scoring
@@ -47,12 +49,16 @@ SYNAPTOR AI Tutor의 FastAPI 백엔드입니다. PDF 처리, RAG 근거 검색, 
   - 오개념 탐지
   - Level 1~5 힌트 생성
   - 자기 설명 평가
-  - 업로드 자료 기반 Tutor Chat
+  - 업로드 자료 기반 AI Chat
+  - Gemini JSON 응답 파싱 실패 시 안전 fallback
+  - evidence가 없을 때 hallucination 방지 안내
 
 - **개인화 학습**
   - 개념별 숙련도 추적
   - 인지 부하와 힌트 의존도 반영
-  - 다음 난이도와 질문 유형 추천
+  - 난이도별 힌트 예산 적용
+  - 무의미한 답변 0점 처리
+  - 답변 정확도와 힌트 효율 기반 점수 계산
   - 사용자 학습 프로필 집계
   - Daily Review
   - 대시보드 요약 API
@@ -119,10 +125,13 @@ http://localhost:8000/docs
 | GET | `/api/auth/me` | 현재 로그인 사용자 조회 |
 | GET | `/api/materials` | 로그인 사용자의 업로드 자료 목록 조회 |
 | POST | `/api/materials/upload` | PDF 업로드 및 텍스트 추출 |
+| DELETE | `/api/materials/{material_id}` | 자료와 관련 학습 기록 삭제 |
+| POST | `/api/materials/{material_id}/study/start` | Study Room 개념/질문 자동 준비 |
 | POST | `/api/materials/{material_id}/chat` | 자료 근거 기반 튜터 채팅 |
 | POST | `/api/materials/{material_id}/concepts/extract` | 핵심 개념 추출 |
 | POST | `/api/concepts/{concept_id}/questions/generate` | Active Recall 질문 생성 |
 | POST | `/api/questions/{question_id}/answer` | 사용자 답변 평가 |
+| POST | `/api/questions/{question_id}/hint` | 답변 전 단계형 자료 기반 힌트 생성 |
 | POST | `/api/answers/{answer_id}/hint` | 단계별 힌트 생성 |
 | POST | `/api/concepts/{concept_id}/self-explanation` | 자기 설명 평가 |
 | GET | `/api/profile/learning` | 사용자 학습 프로필 조회 |

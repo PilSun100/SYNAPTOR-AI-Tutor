@@ -86,9 +86,12 @@ def create_persistent_volume_question(client: TestClient, headers: dict[str, str
             "file": (
                 "persistent-volume.pdf",
                 make_pdf_bytes(
-                    "Persistent Volume\n"
+                    "Persistent 볼륨 생명 주기\n"
+                    "Persistent Volume 템플릿 Kubernetes - 3 18\n"
                     "Cluster-managed storage volume resource\n"
+                    "Persistent Volume Claim 템플릿 Kubernetes - 3 19\n"
                     "Separate lifecycle from Pod\n"
+                    "Reclaiming - 반환 정책 (Retain/Delete/Recycle) Persistent 볼륨 생명 주기 Kubernetes - 3 17\n"
                     "Pod does not mount it directly and uses PVC in between"
                 ),
                 "application/pdf",
@@ -261,8 +264,11 @@ def test_pre_answer_hints_use_material_points_progressively() -> None:
         assert "자료 근거 힌트" in hints[1]
         assert "Cluster" in hints[1] or "Pod" in hints[1]
         assert "문장 틀 힌트" in hints[2]
+        assert "storage volume resource" in hints[2] or "lifecycle" in hints[2]
         assert "핵심 키워드 힌트" in hints[3]
         assert "거의 마지막 힌트" in hints[4]
         assert "OOOO" not in joined
+        assert "템플릿" not in joined
+        assert "Kubernetes - 3" not in joined
         assert not re.search(r"[A-Za-z가-힣]_{2,}", joined)
         assert fifth.json()["source"] == "rag"
